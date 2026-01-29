@@ -1,11 +1,18 @@
+import Btn from "@/components/Btn";
+import {
+     AppleIcon,
+     EmailIcon,
+     GoogleIcon,
+     QuaDizIcon,
+} from "@/components/SVGIcons";
 import React from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Signup = () => {
   return (
-    <SafeAreaView className="flex flex-col flex-1 items-center justify-center bg-[#F4F4F5] p-6">
-      <View className="items-center justify-center bg-white p-10 rounded-3xl">
+    <SafeAreaView className="flex flex-col flex-1 items-center justify-center bg-[#F4F4F5] p-6 gap-10">
+      <View className="flex gap-12 items-center justify-center  p-10 rounded-3xl bg-white w-full">
         <View className="flex gap-2">
           <Text className="text-center text-3xl font-bold tracking-tight">
             Signup
@@ -15,6 +22,33 @@ const Signup = () => {
             <Text className="font-bold">Smart Hydrate</Text>
           </Text>
         </View>
+
+        <View className="flex flex-col gap-2 w-full">
+          <Btn
+            label="Continue with Google"
+            textColor="#3F3F46"
+            styles="border border-[#E4E4E7] w-full"
+            leftIcon={<GoogleIcon />}
+          />
+          <Btn
+            label="Continue with Apple"
+            textColor="#3F3F46"
+            styles="border border-[#E4E4E7] w-full"
+            leftIcon={<AppleIcon />}
+          />
+          <Btn
+            label="Continue with Email"
+            textColor="#3F3F46"
+            styles="border border-[#E4E4E7] w-full"
+            leftIcon={<EmailIcon />}
+          />
+        </View>
+      </View>
+      <View className="flex flex-row items-center justify-center gap-2 mb-2">
+        <Text className="text-center text-base text-[#71717A] justify-center text-Color-Solid-Color-Default-default-500 font-medium font-['Fustat'] tracking-tight">
+          Powered by:
+        </Text>
+        <QuaDizIcon />
       </View>
     </SafeAreaView>
   );

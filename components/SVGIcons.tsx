@@ -1,5 +1,5 @@
 import { ComponentProps } from "react";
-import Svg, { ClipPath, Defs, G, Path } from "react-native-svg";
+import Svg, { ClipPath, Defs, G, Mask, Path } from "react-native-svg";
 
 export const QuaDizIcon = (props: ComponentProps<typeof Svg>) => (
   <Svg width={63} height={16} fill="none" {...props}>
@@ -18,5 +18,85 @@ export const QuaDizIcon = (props: ComponentProps<typeof Svg>) => (
         <Path fill="#fff" d="M0 0h63v16H0z" />
       </ClipPath>
     </Defs>
+  </Svg>
+);
+
+export const GoogleIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg width={23} height={24} fill="none" {...props}>
+    <G clipPath="url(#a)">
+      <Path
+        fill="#4285f4"
+        d="M22.989 12.225c0-.984-.078-1.701-.248-2.445H11.73v4.438h6.464c-.13 1.102-.834 2.764-2.398 3.88l-.022.148 3.482 2.75.241.025c2.216-2.086 3.493-5.156 3.493-8.796"
+      />
+      <Path
+        fill="#34a853"
+        d="M11.73 23.918c3.166 0 5.825-1.063 7.766-2.897l-3.7-2.923c-.991.704-2.32 1.195-4.067 1.195-3.102 0-5.734-2.086-6.673-4.969l-.137.012-3.62 2.857-.048.134c1.929 3.906 5.89 6.59 10.478 6.59"
+      />
+      <Path
+        fill="#fbbc05"
+        d="M5.057 14.324a7.5 7.5 0 0 1-.391-2.365c0-.824.143-1.621.377-2.365l-.006-.159L1.37 6.532l-.12.059A12.16 12.16 0 0 0 0 11.959c0 1.927.456 3.747 1.251 5.368z"
+      />
+      <Path
+        fill="#eb4335"
+        d="M11.73 4.624c2.201 0 3.687.97 4.534 1.78l3.31-3.295C17.542 1.183 14.897 0 11.73 0 7.142 0 3.18 2.684 1.251 6.59l3.792 3.004c.952-2.884 3.584-4.97 6.686-4.97"
+      />
+    </G>
+    <Defs>
+      <ClipPath id="a">
+        <Path fill="#fff" d="M0 0h23v24H0z" />
+      </ClipPath>
+    </Defs>
+  </Svg>
+);
+
+export const AppleIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg width={24} height={24} fill="none" {...props}>
+    <G clipPath="url(#a)">
+      <Mask
+        id="b"
+        width={20}
+        height={25}
+        x={2}
+        y={0}
+        maskUnits="userSpaceOnUse"
+        style={{
+          maskType: "luminance",
+        }}
+      >
+        <Path fill="#fff" d="M2.25 0h19.545v24.001H2.25z" />
+      </Mask>
+      <G mask="url(#b)">
+        <Path
+          fill="#3f3f46"
+          d="M18.57 12.752c-.027-3.036 2.483-4.495 2.596-4.567-1.412-2.065-3.607-2.347-4.39-2.38-1.868-.19-3.646 1.1-4.595 1.1S9.77 5.834 8.22 5.864c-2.038.03-3.916 1.183-4.967 3.009-2.115 3.668-.54 9.109 1.522 12.09 1.01 1.456 2.21 3.097 3.79 3.037 1.522-.061 2.095-.985 3.932-.985s2.355.985 3.96.954c1.636-.033 2.673-1.489 3.674-2.95 1.155-1.691 1.632-3.33 1.66-3.415-.036-.014-3.188-1.222-3.221-4.85"
+        />
+      </G>
+      <Path
+        fill="#3f3f46"
+        d="M15.551 3.833c.838-1.015 1.404-2.427 1.25-3.833-1.209.05-2.67.805-3.536 1.82-.775.896-1.456 2.333-1.272 3.712 1.343.105 2.72-.686 3.558-1.699"
+      />
+    </G>
+    <Defs>
+      <ClipPath id="a">
+        <Path fill="#fff" d="M0 0h24v24H0z" />
+      </ClipPath>
+    </Defs>
+  </Svg>
+);
+
+export const EmailIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg width={24} height={24} fill="none" {...props}>
+    <Path
+      stroke="#52525b"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="m2 6 6.913 3.917c2.549 1.444 3.625 1.444 6.174 0L22 6"
+    />
+    <Path
+      stroke="#52525b"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M2.016 13.476c.065 3.065.098 4.598 1.229 5.733 1.131 1.136 2.705 1.175 5.854 1.254 1.94.05 3.862.05 5.802 0 3.149-.079 4.723-.118 5.854-1.254 1.131-1.135 1.164-2.668 1.23-5.733.02-.986.02-1.966 0-2.952-.066-3.065-.099-4.598-1.23-5.733-1.131-1.136-2.705-1.175-5.854-1.254a115 115 0 0 0-5.802 0c-3.149.079-4.723.118-5.854 1.254-1.131 1.135-1.164 2.668-1.23 5.733a69 69 0 0 0 0 2.952Z"
+    />
   </Svg>
 );
