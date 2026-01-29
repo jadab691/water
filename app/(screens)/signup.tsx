@@ -27,19 +27,16 @@ const Signup = () => {
         <View className="flex flex-col gap-2 w-full">
           <Btn
             label="Continue with Google"
-            textColor="#3F3F46"
             styles="border border-[#E4E4E7] w-full"
             leftIcon={<GoogleIcon />}
           />
           <Btn
             label="Continue with Apple"
-            textColor="#3F3F46"
             styles="border border-[#E4E4E7] w-full"
             leftIcon={<AppleIcon />}
           />
           <Btn
             label="Continue with Email"
-            textColor="#3F3F46"
             styles="border border-[#E4E4E7] w-full"
             leftIcon={<EmailIcon />}
             action={() => router.push("/signup-email")}

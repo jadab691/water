@@ -1,5 +1,6 @@
 import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
+import { Link } from "expo-router";
 import React, { useState } from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -58,10 +59,13 @@ const SignupEmail = () => {
 
           <Btn label="Sign Up" styles="bg-[#0090C8]" textStyles="text-white" />
 
-          <Text className="text-center text-base text-[#71717a] px-5">
+          <Link
+            href="/login"
+            className="text-center text-base text-[#71717a] px-5"
+          >
             Already have account?{" "}
             <Text className="font-bold text-[#0090C8]">Log In</Text>
-          </Text>
+          </Link>
         </View>
       </View>
     </SafeAreaView>
