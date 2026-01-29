@@ -1,7 +1,7 @@
 import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
 import { AppleIcon, EmailIcon, GoogleIcon } from "@/components/SVGIcons";
-import { router } from "expo-router";
+import { Link, router } from "expo-router";
 import React, { useState } from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -88,10 +88,13 @@ const SignupEmail = () => {
             />
           </View>
 
-          <Text className="text-center text-base text-[#71717a] px-5">
+          <Link
+            href="/signup"
+            className="text-center text-base text-[#71717a] px-5"
+          >
             Don't have account?{" "}
             <Text className="font-bold text-[#0090C8]">Sign Up</Text>
-          </Text>
+          </Link>
         </View>
       </View>
     </SafeAreaView>
