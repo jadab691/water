@@ -1,6 +1,7 @@
 // import { logo } from "@/utils/constant";
 // import AsyncStorage from "@react-native-async-storage/async-storage";
 import { logo } from "@/utils/constants";
+import { router } from "expo-router";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { QuaDizIcon } from "../components/SVGIcons";
@@ -42,6 +43,7 @@ export default function Index() {
       </View>
       <TouchableOpacity
         // onPress={() => handleGetStarted()}
+        onPress={() => router.push("/signup")}
         className="bg-[#0090C8] text-center py-4 w-full rounded-2xl mb-4"
       >
         <Text className="text-center text-xl font-semibold text-white">
