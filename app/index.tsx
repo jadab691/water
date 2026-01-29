@@ -49,7 +49,7 @@ export default function Index() {
         </Text>
       </TouchableOpacity>
       <View className="flex flex-row items-center justify-center gap-2 mb-2">
-        <Text className="text-center text-base text-[#71717A] justify-center text-Color-Solid-Color-Default-default-500 text-base font-medium font-['Fustat'] tracking-tight">
+        <Text className="text-center text-base text-[#71717A] justify-center text-Color-Solid-Color-Default-default-500 font-medium font-['Fustat'] tracking-tight">
           Powered by:
         </Text>
         <QuaDizIcon />
