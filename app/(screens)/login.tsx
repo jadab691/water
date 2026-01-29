@@ -63,7 +63,7 @@ const SignupEmail = () => {
             textStyles="text-white"
           />
 
-          <View className="flex flex-row items-center justify-center gap-4 mt-4 mb-2 px-4  overflow-hidden">
+          <View className="flex flex-row items-center justify-center gap-4 px-4  overflow-hidden">
             <View className="border-b border-[#E4E4E7] w-full" />
             <Text className="text-center">or</Text>
             <View className="border-b border-[#E4E4E7] w-full" />
