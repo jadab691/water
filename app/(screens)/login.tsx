@@ -54,7 +54,9 @@ const SignupEmail = () => {
               <View className="w-5 h-5 border border-[#D4D4D8] rounded-md" />
               <Text className="text-[#71717A]"> Remember me</Text>
             </View>
-            <Text className="text-base text-[#0090C8]">Forgot Password?</Text>
+            <Link href="/forgot-password" className="text-base text-[#0090C8]">
+              Forgot Password?
+            </Link>
           </View>
 
           <Btn
