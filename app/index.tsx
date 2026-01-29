@@ -1,8 +1,9 @@
 // import { logo } from "@/utils/constant";
 // import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Text, TouchableOpacity, View } from "react-native";
+import { logo } from "@/utils/constants";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { QuaDizIcon } from "./components/SVGIcons";
+import { QuaDizIcon } from "../components/SVGIcons";
 
 export default function Index() {
   // useEffect(() => {
@@ -25,7 +26,7 @@ export default function Index() {
   return (
     <SafeAreaView className="flex flex-col flex-1 items-center justify-between bg-[#EEFAFF] p-6">
       <View className="flex-1 items-center justify-center">
-        {/* <Image source={logo} className="h-24 w-24 mb-6" resizeMode="contain" /> */}
+        <Image source={logo} className="size-32 mb-6" resizeMode="contain" />
 
         <View className="flex flex-row text-center justify-center gap-1 mb-4">
           <Text className=" text-3xl font-bold tracking-tight">Smarter</Text>
@@ -34,7 +35,7 @@ export default function Index() {
           </Text>
         </View>
 
-        <Text className="text-center text-base text-[#71717a] text-white">
+        <Text className="text-center text-base text-[#71717a] px-5">
           Track your daily water intake with AI-Powered insights. Stay healthy
           energized & focused.
         </Text>
@@ -48,7 +49,7 @@ export default function Index() {
         </Text>
       </TouchableOpacity>
       <View className="flex flex-row items-center justify-center gap-2 mb-2">
-        <Text className="text-center text-base text-[#71717a] text-white justify-center text-Color-Solid-Color-Default-default-500 text-base font-medium font-['Fustat'] tracking-tight">
+        <Text className="text-center text-base text-[#71717A] justify-center text-Color-Solid-Color-Default-default-500 text-base font-medium font-['Fustat'] tracking-tight">
           Powered by:
         </Text>
         <QuaDizIcon />
