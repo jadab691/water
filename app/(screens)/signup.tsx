@@ -1,10 +1,11 @@
 import Btn from "@/components/Btn";
 import {
-     AppleIcon,
-     EmailIcon,
-     GoogleIcon,
-     QuaDizIcon,
+  AppleIcon,
+  EmailIcon,
+  GoogleIcon,
+  QuaDizIcon,
 } from "@/components/SVGIcons";
+import { router } from "expo-router";
 import React from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -41,6 +42,7 @@ const Signup = () => {
             textColor="#3F3F46"
             styles="border border-[#E4E4E7] w-full"
             leftIcon={<EmailIcon />}
+            action={() => router.push("/signup-email")}
           />
         </View>
       </View>
