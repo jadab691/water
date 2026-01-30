@@ -2,7 +2,7 @@ import { ComponentProps } from "react";
 import Svg, { ClipPath, Defs, G, Mask, Path } from "react-native-svg";
 
 export const QuaDizIcon = (props: ComponentProps<typeof Svg>) => (
-  <Svg width={63} height={16} fill="none" {...props}>
+  <Svg width={63} height={16} viewBox="0 0 63 16" fill="none" {...props}>
     <G clipPath="url(#a)">
       <Path
         fill="#c44536"
@@ -22,7 +22,7 @@ export const QuaDizIcon = (props: ComponentProps<typeof Svg>) => (
 );
 
 export const GoogleIcon = (props: ComponentProps<typeof Svg>) => (
-  <Svg width={23} height={24} fill="none" {...props}>
+  <Svg fill="none" viewBox="0 0 23 24" {...props}>
     <G clipPath="url(#a)">
       <Path
         fill="#4285f4"
@@ -50,7 +50,7 @@ export const GoogleIcon = (props: ComponentProps<typeof Svg>) => (
 );
 
 export const AppleIcon = (props: ComponentProps<typeof Svg>) => (
-  <Svg width={24} height={24} fill="none" {...props}>
+  <Svg viewBox="0 0 24 24" fill="none" {...props}>
     <G clipPath="url(#a)">
       <Mask
         id="b"
@@ -85,7 +85,7 @@ export const AppleIcon = (props: ComponentProps<typeof Svg>) => (
 );
 
 export const EmailIcon = (props: ComponentProps<typeof Svg>) => (
-  <Svg width={24} height={24} fill="none" {...props}>
+  <Svg viewBox="0 0 24 24" fill="none" {...props}>
     <Path
       stroke="#52525b"
       strokeLinejoin="round"
@@ -97,6 +97,58 @@ export const EmailIcon = (props: ComponentProps<typeof Svg>) => (
       strokeLinejoin="round"
       strokeWidth={1.5}
       d="M2.016 13.476c.065 3.065.098 4.598 1.229 5.733 1.131 1.136 2.705 1.175 5.854 1.254 1.94.05 3.862.05 5.802 0 3.149-.079 4.723-.118 5.854-1.254 1.131-1.135 1.164-2.668 1.23-5.733.02-.986.02-1.966 0-2.952-.066-3.065-.099-4.598-1.23-5.733-1.131-1.136-2.705-1.175-5.854-1.254a115 115 0 0 0-5.802 0c-3.149.079-4.723.118-5.854 1.254-1.131 1.135-1.164 2.668-1.23 5.733a69 69 0 0 0 0 2.952Z"
+    />
+  </Svg>
+);
+
+export const BellIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg viewBox="0 0 28 28" fill="none" {...props}>
+    <Path
+      stroke="#0072a2"
+      strokeLinecap="round"
+      strokeMiterlimit={10}
+      strokeWidth={2}
+      d="M14.023 3.395c-3.861 0-7 3.138-7 7v3.372c0 .711-.303 1.796-.665 2.403l-1.341 2.228c-.829 1.377-.257 2.905 1.26 3.419a24.4 24.4 0 0 0 15.481 0c1.412-.467 2.03-2.135 1.26-3.419l-1.341-2.228c-.35-.607-.654-1.692-.654-2.403v-3.372c0-3.85-3.15-7-7-7Z"
+    />
+    <Path
+      stroke="#0072a2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeMiterlimit={10}
+      strokeWidth={2}
+      d="M16.182 3.733a7.88 7.88 0 0 0-4.317 0 2.32 2.32 0 0 1 2.158-1.47c.98 0 1.82.607 2.159 1.47"
+    />
+    <Path
+      stroke="#0072a2"
+      strokeMiterlimit={10}
+      strokeWidth={2}
+      d="M17.523 22.237a3.51 3.51 0 0 1-3.5 3.5 3.5 3.5 0 0 1-2.473-1.027 3.5 3.5 0 0 1-1.027-2.473"
+    />
+  </Svg>
+);
+
+export const GlassIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg viewBox="0 0 21 28" fill="none" {...props}>
+    <Path
+      fill="#0090c8"
+      d="M21 1.528c0-.405-.395-.826-3.264-1.17C15.801.129 13.232 0 10.5 0S5.198.127 3.264.359C.396.702 0 1.123 0 1.528c0 .012 2.809 24.008 2.809 24.008.246 1.427 3.48 2.464 7.69 2.464 4.261 0 7.423-1.011 7.695-2.48 0 0 2.806-23.98 2.806-23.992M10.5.62c5.496 0 9.103.513 9.783.907-.68.394-4.287.906-9.783.906S1.397 1.922.717 1.528C1.397 1.135 5.004.62 10.5.62m7.058 24.81c-.174.937-2.922 1.948-7.058 1.948-4.151 0-6.894-1.009-7.054-1.928L.726 2.202c.48.175 1.264.342 2.538.495 1.934.231 4.505.359 7.236.359s5.3-.128 7.236-.36c1.275-.152 2.058-.32 2.538-.494z"
+    />
+    <Path
+      fill="#0090c8"
+      d="M17.584 5.626c-.626.017-5.394 4.028-12.073 3.588 0 0 5.13-.367 7.545-2.61-5.854-1.865-11.373-.17-11.373-.17l2.11 18.187.156.075c2.415 1.164 4.69 1.553 6.653 1.553 3.91 0 6.574-1.542 6.614-1.567l.134-.08L19.13 8.33c.167-1.754-.967-2.719-1.546-2.704"
+      opacity={0.5}
+    />
+  </Svg>
+);
+
+export const TrashIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg viewBox="0 0 18 18" fill="none" {...props}>
+    <Path
+      stroke="#a1a1aa"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.2}
+      d="M15.75 4.485a76 76 0 0 0-7.515-.375q-2.228 0-4.455.225l-1.53.15m4.125-.757.165-.983c.12-.712.21-1.245 1.478-1.245h1.964c1.268 0 1.366.563 1.478 1.253l.165.974m2.513 3.128-.488 7.553c-.082 1.177-.15 2.092-2.242 2.092H6.593c-2.093 0-2.16-.915-2.243-2.092l-.487-7.553m3.885 5.52h2.497m-3.12-3h3.75"
     />
   </Svg>
 );

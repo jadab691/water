@@ -28,17 +28,18 @@ const Signup = () => {
           <Btn
             label="Continue with Google"
             styles="border border-[#E4E4E7] w-full"
-            leftIcon={<GoogleIcon />}
+            leftIcon={<GoogleIcon style={{ width: 18, height: 18 }} />}
+            action={() => router.push("/home")}
           />
           <Btn
             label="Continue with Apple"
             styles="border border-[#E4E4E7] w-full"
-            leftIcon={<AppleIcon />}
+            leftIcon={<AppleIcon style={{ width: 18, height: 18 }} />}
           />
           <Btn
             label="Continue with Email"
             styles="border border-[#E4E4E7] w-full"
-            leftIcon={<EmailIcon />}
+            leftIcon={<EmailIcon style={{ width: 18, height: 18 }} />}
             action={() => router.push("/signup-email")}
           />
         </View>
