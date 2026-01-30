@@ -8,7 +8,7 @@ interface QuickaddProps {
 
 const Quickadd = ({ amount }: QuickaddProps) => {
   return (
-    <TouchableOpacity className="w-1/2 p-6 flex flex-col bg-white rounded-lg justify-center items-center border border-[#F4F4F5]">
+    <TouchableOpacity className="flex-1 p-6 flex flex-col bg-white rounded-lg justify-center items-center border border-[#F4F4F5]">
       <GlassIcon
         style={{
           width: 21,
