@@ -1,8 +1,10 @@
+import Activity from "@/components/Activity";
 import Btn from "@/components/Btn";
-import { BellIcon, GlassIcon, TrashIcon } from "@/components/SVGIcons";
+import Quickadd from "@/components/Quickadd";
+import { BellIcon } from "@/components/SVGIcons";
 import Entypo from "@expo/vector-icons/Entypo";
 import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Home = () => {
@@ -34,35 +36,9 @@ const Home = () => {
           </Text>
 
           <View className="flex gap-4 w-full justify-around align-middle items-center flex-row mb-6">
-            <TouchableOpacity className="w-1/2 p-6 flex flex-col bg-white rounded-lg justify-center items-center border border-[#F4F4F5]">
-              <GlassIcon
-                style={{
-                  width: 21,
-                  height: 28,
-                }}
-              />
-              <Text className="justify-center text-[#3F3F46] text-xl font-extrabold mt-4">
-                250ml
-              </Text>
-              <Text className="justify-center text-[#71717A] text-sm font-normal">
-                Quick Add
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity className="w-1/2 p-6 flex flex-col bg-white rounded-lg justify-center items-center border border-[#F4F4F5]">
-              <GlassIcon
-                style={{
-                  width: 21,
-                  height: 28,
-                }}
-              />
-              <Text className="justify-center text-[#3F3F46] text-xl font-extrabold mt-4">
-                250ml
-              </Text>
-              <Text className="justify-center text-[#71717A] text-sm font-normal">
-                Quick Add
-              </Text>
-            </TouchableOpacity>
+            {/* TODO: Need fix */}
+            <Quickadd amount="250ml" />
+            <Quickadd amount="500ml" />
           </View>
 
           <Btn
@@ -78,24 +54,12 @@ const Home = () => {
             Today's Activity
           </Text>
 
-          <View>
-            <View className="bg-[#FAFAFA]">
-              <GlassIcon
-                style={{
-                  width: 17,
-                  height: 24,
-                }}
-              />
-              <Text>
-                <Text>200 ml</Text> | 8:30 am
-              </Text>
-              <TrashIcon
-                style={{
-                  width: 12,
-                  height: 12,
-                }}
-              />
-            </View>
+          <View className="flex flex-col gap-2">
+            <Activity amount="250 ml" time="08:30 AM" />
+            <Activity amount="500 ml" time="10:00 AM" />
+            <Activity amount="300 ml" time="12:15 PM" />
+            <Activity amount="450 ml" time="02:45 PM" />
+            <Activity amount="500 ml" time="05:00 PM" />
           </View>
         </View>
       </SafeAreaView>
