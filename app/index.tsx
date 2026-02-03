@@ -39,7 +39,7 @@ export default function Index() {
           </Text>
         </View>
 
-        <Text className="font-bungee text-center text-base text-[#71717a] px-5">
+        <Text className=" text-center text-base text-[#71717a] px-5">
           Track your daily water intake with AI-Powered insights. Stay healthy
           energized & focused.
         </Text>
@@ -49,7 +49,7 @@ export default function Index() {
         onPress={() => router.push("/signup")}
         className="bg-[#0090C8] text-center py-4 w-full rounded-2xl mb-4"
       >
-        <Text className="font-bungee text-center text-xl font-semibold text-white">
+        <Text className=" text-center text-xl font-semibold text-white">
           Get Started
         </Text>
       </TouchableOpacity>
