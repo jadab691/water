@@ -2,9 +2,10 @@ import Activity from "@/components/Activity";
 import Btn from "@/components/Btn";
 import Quickadd from "@/components/Quickadd";
 import { BellIcon } from "@/components/SVGIcons";
+import Text from "@/components/Text";
 import Entypo from "@expo/vector-icons/Entypo";
 import React from "react";
-import { FlatList, ScrollView, Text, View } from "react-native";
+import { FlatList, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Home = () => {

@@ -1,5 +1,6 @@
 import React from "react";
-import { Text, View } from "react-native";
+import Text from "./Text";
+import {  View } from "react-native";
 import { GlassIcon, TrashIcon } from "./SVGIcons";
 
 interface ActivityProps {
@@ -19,7 +20,7 @@ const Activity = ({ amount, time }: ActivityProps) => {
         />
 
         <Text className="text-[#27272A] font-bold">{amount}</Text>
-        <Text>|</Text>
+        <Text className="font-bungee">|</Text>
         <Text className="text-[#52525B]">{time}</Text>
       </View>
       <TrashIcon

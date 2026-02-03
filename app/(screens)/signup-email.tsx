@@ -1,8 +1,9 @@
 import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
+import Text from "@/components/Text";
 import { Link } from "expo-router";
 import React, { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type FormState = {
