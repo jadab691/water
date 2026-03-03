@@ -152,3 +152,82 @@ export const TrashIcon = (props: ComponentProps<typeof Svg>) => (
     />
   </Svg>
 );
+
+export const HomeIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg viewBox="0 0 32 32" fill="none" {...props}>
+    <Path
+      fill="currentColor"
+      d="M16 25c-.547 0-1-.453-1-1v-4c0-.547.453-1 1-1s1 .453 1 1v4c0 .547-.453 1-1 1"
+    />
+    <Path
+      fill="currentColor"
+      d="M23.467 30.08H8.533c-2.426 0-4.64-1.867-5.04-4.253L1.72 15.2c-.293-1.653.52-3.773 1.84-4.827l9.24-7.4c1.787-1.44 4.6-1.426 6.4.014l9.24 7.386c1.307 1.054 2.107 3.174 1.84 4.827l-1.773 10.613c-.4 2.36-2.667 4.267-5.04 4.267m-7.48-26.173c-.707 0-1.414.213-1.934.626l-9.24 7.414c-.746.6-1.28 1.986-1.12 2.933l1.774 10.613c.24 1.4 1.64 2.587 3.066 2.587h14.934c1.426 0 2.826-1.187 3.066-2.6l1.774-10.613c.146-.934-.387-2.347-1.12-2.934l-9.24-7.386c-.534-.427-1.254-.64-1.96-.64"
+    />
+  </Svg>
+);
+
+export const AwardIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg fill="none" viewBox="0 0 32 32" {...props}>
+    <Path
+      stroke="#a1a1aa"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M5.68 14.693v6.627c0 2.427 0 2.427 2.293 3.973l6.307 3.64c.947.547 2.493.547 3.44 0l6.307-3.64c2.293-1.546 2.293-1.546 2.293-3.973v-6.627c0-2.426 0-2.426-2.293-3.973L17.72 7.08c-.947-.547-2.493-.547-3.44 0l-6.307 3.64C5.68 12.267 5.68 12.267 5.68 14.693"
+    />
+    <Path
+      stroke="#a1a1aa"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M23.333 10.173V6.667q0-4-4-4h-6.666q-4 0-4 4v3.413m8.173 4.573l.76 1.187c.12.187.387.373.587.427l1.36.346c.84.214 1.066.934.52 1.6l-.894 1.08c-.133.174-.24.48-.226.694l.08 1.4c.053.866-.56 1.306-1.36.986l-1.307-.52a1.15 1.15 0 00-.733 0l-1.307.52c-.8.32-1.413-.133-1.36-.986l.08-1.4a1.17 1.17 0 00-.227-.694l-.893-1.08c-.547-.666-.32-1.386.52-1.6l1.36-.346c.213-.054.48-.254.587-.427l.76-1.187c.48-.72 1.226-.72 1.693 0"
+    />
+  </Svg>
+);
+
+export const SparkleIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg fill="none" viewBox="0 0 35 35" {...props}>
+    <Path
+      fill="#fff"
+      stroke="#fff"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M4.375 17.5c9.14 0 13.125-3.845 13.125-13.125 0 9.28 3.957 13.125 13.125 13.125-9.168 0-13.125 3.957-13.125 13.125 0-9.168-3.985-13.125-13.125-13.125z"
+    />
+  </Svg>
+);
+
+export const CalenderIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg fill="none" viewBox="0 0 32 32" {...props}>
+    <Path
+      stroke="#a1a1aa"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeMiterlimit={10}
+      strokeWidth={2}
+      d="M10.667 2.667v4m10.666-4v4M4.667 12.12h22.666m2 13.213c0 1-.28 1.947-.773 2.747A5.29 5.29 0 0124 30.667a5.2 5.2 0 01-3.507-1.334 4.8 4.8 0 01-1.053-1.253 5.23 5.23 0 01-.773-2.747A5.33 5.33 0 0124 20c1.6 0 3.027.707 4 1.813a5.33 5.33 0 011.333 3.52"
+    />
+    <Path
+      stroke="#a1a1aa"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M21.92 25.333l1.32 1.32 2.84-2.626"
+    />
+    <Path
+      stroke="#a1a1aa"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeMiterlimit={10}
+      strokeWidth={2}
+      d="M28 11.333v10.48A5.31 5.31 0 0024 20a5.33 5.33 0 00-5.333 5.333c0 1 .28 1.947.773 2.747.28.48.64.907 1.053 1.253h-9.826C6 29.333 4 26.667 4 22.667V11.333c0-4 2-6.666 6.667-6.666h10.666C26 4.667 28 7.333 28 11.333"
+    />
+    <Path
+      stroke="#a1a1aa"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M15.994 18.267h.012m-4.946 0h.011m-.011 4h.011"
+    />
+  </Svg>
+);

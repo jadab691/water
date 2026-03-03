@@ -16,14 +16,14 @@ const Home = () => {
   ];
 
   return (
-    <ScrollView>
+    <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
       <SafeAreaView className="flex flex-col flex-1 justify-start bg-[#FAFAFA] p-6">
         <View className="flex flex-row w-full items-center justify-between mb-12">
           <View>
-            <Text className="self-stretch justify-center text-[#27272A] text-2xl font-bold">
+            <Text className="justify-center text-[#27272A]" font="fustat-bold">
               Hi Smith!
             </Text>
-            <Text className="justify-center text-[#3F3F46] text-sm font-normal">
+            <Text className="justify-center text-[#3F3F46] text-sm">
               Jan 23, 2024 | Friday
             </Text>
           </View>
