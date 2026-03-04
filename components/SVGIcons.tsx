@@ -288,7 +288,7 @@ export const DoubleSparkleIcon = (
 export const ThreeDayStreakIcon = (
   props: ComponentProps<typeof Svg> & { color?: string },
 ) => (
-  <Svg width={50} height={51} fill="none" {...props}>
+  <Svg width={50} height={51} viewBox="0 0 50 51" fill="none" {...props}>
     <Path
       fill="#0090c8"
       d="M47.894 25.501 50 21.073l-3.486-3.437.47-4.884-4.446-2.033-1.22-4.752-4.87-.382-2.765-4.046-4.707 1.313L25 0l-3.975 2.852-4.706-1.314-2.765 4.047-4.87.381-1.221 4.753-4.446 2.032.47 4.885L0 21.073l2.106 4.43-2.105 4.426 3.487 3.438-.472 4.884 4.448 2.033 1.22 4.75 4.87.383 2.765 4.046 4.707-1.315L24.999 51l3.976-2.852 4.707 1.315 2.764-4.046 4.871-.383 1.22-4.751 4.447-2.032-.471-4.885 3.486-3.437z"
@@ -308,7 +308,7 @@ export const ThreeDayStreakIcon = (
 export const SevenDayStreakIcon = (
   props: ComponentProps<typeof Svg> & { color?: string },
 ) => (
-  <Svg width={50} height={51} fill="none" {...props}>
+  <Svg width={50} height={51} viewBox="0 0 50 51" fill="none" {...props}>
     <Path
       fill="#f31260"
       d="M47.894 25.501 50 21.073l-3.486-3.437.47-4.884-4.446-2.033-1.22-4.752-4.87-.382-2.765-4.046-4.707 1.313L25 0l-3.975 2.852-4.706-1.314-2.765 4.047-4.87.381-1.221 4.753-4.446 2.032.47 4.885L0 21.073l2.106 4.43-2.105 4.426 3.487 3.438-.472 4.884 4.448 2.033 1.22 4.75 4.87.383 2.765 4.046 4.707-1.315L24.999 51l3.976-2.852 4.707 1.315 2.764-4.046 4.871-.383 1.22-4.751 4.447-2.032-.471-4.885 3.486-3.437z"
@@ -328,7 +328,7 @@ export const SevenDayStreakIcon = (
 export const FifteenDayStreakIcon = (
   props: ComponentProps<typeof Svg> & { color?: string },
 ) => (
-  <Svg width={50} height={50} fill="none" {...props}>
+  <Svg width={50} height={50} viewBox="0 0 50 50" fill="none" {...props}>
     <Path
       fill="#12A150"
       d="M42.678 32.322 50 25l-7.322-7.322V7.322H32.323L25 0l-7.322 7.322H7.322v10.355L0 25l7.322 7.323v10.356h10.356L25 50l7.323-7.322h10.355V32.322Z"
@@ -351,7 +351,7 @@ export const FifteenDayStreakIcon = (
 export const ThirtyDayStreakIcon = (
   props: ComponentProps<typeof Svg> & { color?: string },
 ) => (
-  <Svg width={48} height={50} fill="none" {...props}>
+  <Svg width={48} height={50} viewBox="0 0 48 50" fill="none" {...props}>
     <Path
       fill="#A1186F"
       d="M48 24.013c-3.243-3.615-4.263-5.099-5.097-10.106-.833-5.007 2.873-9.365 2.873-9.365l-2.224-2.873s-2.503 1.02-6.116.834C33.822 2.318 31.135 0 31.135 0 30.394 1.02 27.057 2.874 24 2.874c-3.058 0-6.394-1.854-7.135-2.874 0 0-2.687 2.318-6.301 2.503-3.614.185-6.116-.834-6.116-.834L2.225 4.542S5.93 8.9 5.095 13.907C4.263 18.914 3.245 20.397 0 24.013c1.02.835 2.317 2.597 2.317 2.597S1.298 36.252 7.6 41.165c6.301 4.916 12.695 5.96 12.695 5.96L24 50l3.706-2.875s6.394-1.044 12.695-5.96c6.301-4.913 5.283-14.555 5.283-14.555S46.98 24.848 48 24.013Z"
@@ -370,7 +370,7 @@ export const ThirtyDayStreakIcon = (
 export const SixtyDayStreakIcon = (
   props: ComponentProps<typeof Svg> & { color?: string },
 ) => (
-  <Svg width={46} height={50} fill="none" {...props}>
+  <Svg width={46} height={50} viewBox="0 0 46 50" fill="none" {...props}>
     <Path
       fill="#F24C27"
       d="M46 5.806 39.99 0H6.01L0 5.806s3.795 6.648 3.605 13.226c-.218 7.635-2.512 13.978-1.202 16.773 1.313 2.798 4.51 5.972 10.053 8.173C18.138 46.237 21.032 47.744 23 50c1.967-2.256 4.862-3.763 10.545-6.022 5.542-2.201 8.742-5.375 10.052-8.173 1.31-2.795-.983-9.138-1.203-16.773C42.206 12.454 46 5.806 46 5.806Z"
@@ -390,7 +390,7 @@ export const SixtyDayStreakIcon = (
 export const NinetyDayStreakIcon = (
   props: ComponentProps<typeof Svg> & { color?: string },
 ) => (
-  <Svg width={70} height={50} fill="none" {...props}>
+  <Svg width={70} height={50} viewBox="0 0 70 50" fill="none" {...props}>
     <Path
       fill="#005070"
       d="m6.129 26.62.185.083 8.65-.722a96.625 96.625 0 0 1-11.94-4.02 72.3 72.3 0 0 0 1.214 4.515l.054.179-.161.096A67.185 67.185 0 0 1 0 29.054a104.12 104.12 0 0 0 4.594 1.768l1.535-4.201ZM63.678 26.652l.068-.03.088.241 1.428 3.906c1.542-.553 3.078-1.14 4.614-1.774a67.563 67.563 0 0 1-4.133-2.304l-.161-.096.053-.18a71.207 71.207 0 0 0 1.216-4.515 96.443 96.443 0 0 1-11.938 4.02l8.765.732Z"
@@ -429,6 +429,38 @@ export const CheckCircleIcon = (props: ComponentProps<typeof Svg>) => (
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M13.75 7.5L8.75 12.5L6.25 10"
+    />
+  </Svg>
+);
+
+export const TickCircleIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg width={16} height={16} viewBox="0 0 16 16" fill="none">
+    <Path
+      d="M8 14.667A6.667 6.667 0 1 0 8 1.333a6.667 6.667 0 0 0 0 13.334Z"
+      stroke="#22C55E"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M5.167 8 7.06 9.893l3.773-3.786"
+      stroke="#22C55E"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+export const ArrowLeftIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg width={24} height={24} fill="none" {...props}>
+    <Path
+      stroke="#3F3F46"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeMiterlimit={10}
+      strokeWidth={2}
+      d="M9.57 5.93 3.5 12l6.07 6.07M20.5 12H3.67"
     />
   </Svg>
 );
