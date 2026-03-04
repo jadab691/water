@@ -11,6 +11,7 @@ import {
 import Text from "@/components/Text";
 import { logo } from "@/utils/constants";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { LinearGradient } from "expo-linear-gradient";
 import * as MediaLibrary from "expo-media-library";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
@@ -93,60 +94,74 @@ export default function BadgeDetail() {
         </View>
 
         {/* Badge Card */}
-        <View
-          ref={badgeCardRef}
-          collapsable={false}
-          className="bg-white border border-[#4893E5] rounded-3xl p-12 items-center gap-12 mb-6"
+        <LinearGradient
+          colors={["#4893E5", "#F1639C"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            padding: 0.5,
+            borderRadius: 22.5,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 24,
+          }}
         >
-          {/* App Logo */}
-          <View className="flex flex-row items-center justify-center">
-            <Image source={logo} className="size-14" resizeMode="contain" />
+          <View
+            ref={badgeCardRef}
+            collapsable={false}
+            className="bg-white rounded-3xl p-12 items-center gap-12 w-full"
+          >
+            {/* App Logo */}
+            <View className="flex flex-row items-center justify-center">
+              <Image source={logo} className="size-14" resizeMode="contain" />
 
-            <View className="flex flex-col text-center justify-center mb-1">
-              <Text className="text-center text-sm" font="fredoka">
-                Smarter
-              </Text>
-              <Text className=" text-cyan-500 text-sm" font="fredoka">
-                Hydrate
-              </Text>
-            </View>
-          </View>
-
-          {/* Badge Content */}
-          <View className="items-center gap-4 w-full">
-            {/* Badge Icon */}
-            <View className="items-center justify-center w-full">
-              {badgeIcons[badgeId as string] || badgeIcons["3-days"]}
-            </View>
-
-            <View className="items-center gap-1">
-              <Text className="text-[#27272A] text-base" font="fustat-bold">
-                {title}
-              </Text>
-              <Text className="text-[#52525B] text-sm" font="fustat-medium">
-                {status}
-              </Text>
-            </View>
-
-            {/* Unlock Date */}
-            {unlockDate && (
-              <View className="bg-[#F4F4F5] border border-[rgba(113,113,122,0.16)] rounded-lg px-3 py-1.5 flex-row items-center gap-2">
-                <TickCircleIcon />
-                <Text className="text-[#52525B] text-xs" font="fustat-medium">
-                  Unlocked on {unlockDate}
+              <View className="flex flex-col text-center justify-center mb-1">
+                <Text className="text-center text-sm" font="fredoka">
+                  Smarter
+                </Text>
+                <Text className=" text-cyan-500 text-sm" font="fredoka">
+                  Hydrate
                 </Text>
               </View>
-            )}
+            </View>
 
-            {/* User Info */}
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="person" size={12} color="#71717A" />
-              <Text className="text-[#71717A] text-sm" font="fustat-medium">
-                Ahsan Habib
-              </Text>
+            {/* Badge Content */}
+            <View className="items-center gap-4 w-full">
+              {/* Badge Icon */}
+              <View className="items-center justify-center w-full">
+                {badgeIcons[badgeId as string] || badgeIcons["3-days"]}
+              </View>
+
+              <View className="items-center gap-1">
+                <Text className="text-[#27272A] text-base" font="fustat-bold">
+                  {title}
+                </Text>
+                <Text className="text-[#52525B] text-sm" font="fustat-medium">
+                  {status}
+                </Text>
+              </View>
+
+              {/* Unlock Date */}
+              {unlockDate && (
+                <View className="bg-[#F4F4F5] border border-[rgba(113,113,122,0.16)] rounded-lg px-3 py-1.5 flex-row items-center gap-2">
+                  <TickCircleIcon />
+                  <Text className="text-[#52525B] text-xs" font="fustat-medium">
+                    Unlocked on {unlockDate}
+                  </Text>
+                </View>
+              )}
+
+              {/* User Info */}
+              <View className="flex-row items-center gap-1">
+                <Ionicons name="person" size={12} color="#71717A" />
+                <Text className="text-[#71717A] text-sm" font="fustat-medium">
+                  Ahsan Habib
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Action Buttons */}
         <View className="flex-row gap-4">
