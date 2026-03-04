@@ -12,7 +12,8 @@ import {
 } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import { profile } from "@/utils/constants";
-import React, { useState } from "react";
+import * as Sharing from "expo-sharing";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -24,6 +25,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { captureRef } from "react-native-view-shot";
 
 type DropdownOption = {
   label: string;
@@ -31,6 +33,7 @@ type DropdownOption = {
 };
 
 export default function Profile() {
+  const achievementsCardRef = useRef<View>(null);
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [reminderSchedule, setReminderSchedule] = useState("30 min");
   const [reminderSound, setReminderSound] = useState("Water drop sound");
@@ -223,8 +226,20 @@ export default function Profile() {
     Alert.alert("Edit Profile", "Profile editing coming soon!");
   };
 
-  const handleShareAll = () => {
-    Alert.alert("Share All", "Sharing all achievements coming soon!");
+  const handleShareAll = async () => {
+    try {
+      if (!achievementsCardRef.current) return;
+
+      const uri = await captureRef(achievementsCardRef, {
+        format: "png",
+        quality: 1,
+      });
+
+      await Sharing.shareAsync(uri);
+    } catch (error) {
+      console.error("Error sharing achievements:", error);
+      Alert.alert("Error", "Failed to share achievements. Please try again.");
+    }
   };
 
   const handleDeleteCup = (cupName: string) => {
@@ -331,8 +346,12 @@ export default function Profile() {
           </View>
 
           {/* Achievements Section */}
-          <View className="bg-white border border-[#E4E4E7] rounded-2xl p-6 gap-8 mb-4">
-            <View className="gap-6">
+          <View className="bg-white border border-[#E4E4E7] rounded-2xl mb-4">
+            <View
+              ref={achievementsCardRef}
+              collapsable={false}
+              className="bg-white p-6 gap-6"
+            >
               <Text className="text-[#27272A] text-xl" font="fustat-bold">
                 Achievements
               </Text>
@@ -365,15 +384,17 @@ export default function Profile() {
                 ))}
               </View>
             </View>
-            <TouchableOpacity
-              onPress={handleShareAll}
-              className="bg-[#0090C8] rounded-2xl py-4 flex-row items-center justify-center gap-3"
-            >
-              <ShareIcon color="white" width={24} height={24} />
-              <Text className="text-white text-base" font="fustat-semibold">
-                Share All
-              </Text>
-            </TouchableOpacity>
+            <View className="px-6 pb-6">
+              <TouchableOpacity
+                onPress={handleShareAll}
+                className="bg-[#0090C8] rounded-2xl py-4 flex-row items-center justify-center gap-3"
+              >
+                <ShareIcon color="white" width={24} height={24} />
+                <Text className="text-white text-base" font="fustat-semibold">
+                  Share All
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Reminder Section */}
