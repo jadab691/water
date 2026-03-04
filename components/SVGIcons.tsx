@@ -1,5 +1,13 @@
 import { ComponentProps } from "react";
-import Svg, { ClipPath, Defs, G, Mask, Path } from "react-native-svg";
+import Svg, {
+  ClipPath,
+  Defs,
+  G,
+  LinearGradient,
+  Mask,
+  Path,
+  Stop,
+} from "react-native-svg";
 
 export const QuaDizIcon = (props: ComponentProps<typeof Svg>) => (
   <Svg width={63} height={16} viewBox="0 0 63 16" fill="none" {...props}>
@@ -235,5 +243,44 @@ export const CalenderIcon = (
       strokeWidth={2}
       d="M15.994 18.267h.012m-4.946 0h.011m-.011 4h.011"
     />
+  </Svg>
+);
+
+export const DoubleSparkleIcon = (
+  props: ComponentProps<typeof Svg> & { color?: string },
+) => (
+  <Svg width={32} height={32} fill="none" {...props}>
+    <Path
+      fill="url(#a)"
+      d="M4 16c8.357 0 12-3.516 12-12 0 8.484 3.618 12 12 12-8.382 0-12 3.618-12 12 0-8.382-3.643-12-12-12"
+    />
+    <Path
+      fill="url(#b)"
+      d="M0 5.333c3.714 0 5.333-1.562 5.333-5.333 0 3.77 1.608 5.333 5.334 5.333-3.726 0-5.334 1.608-5.334 5.334C5.333 6.94 3.714 5.333 0 5.333"
+    />
+    <Defs>
+      <LinearGradient
+        id="a"
+        x1={16.033}
+        x2={33.886}
+        y1={-0.5}
+        y2={9.061}
+        gradientUnits="userSpaceOnUse"
+      >
+        <Stop stopColor="#4893e5" />
+        <Stop offset={1} stopColor="#f1639c" />
+      </LinearGradient>
+      <LinearGradient
+        id="b"
+        x1={5.348}
+        x2={13.282}
+        y1={-2}
+        y2={2.249}
+        gradientUnits="userSpaceOnUse"
+      >
+        <Stop stopColor="#4893e5" />
+        <Stop offset={1} stopColor="#f1639c" />
+      </LinearGradient>
+    </Defs>
   </Svg>
 );

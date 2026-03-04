@@ -26,7 +26,7 @@ export default function Index() {
   // };
 
   return (
-    <SafeAreaView className="flex flex-col flex-1 items-center justify-between bg-[#EEFAFF] p-6">
+    <SafeAreaView className="flex flex-col flex-1 items-center justify-between bg-[#FAFAFA] p-6">
       <View className="flex-1 items-center justify-center">
         <Image source={logo} className="size-32 mb-6" resizeMode="contain" />
 
