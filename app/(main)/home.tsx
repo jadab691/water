@@ -1,19 +1,27 @@
 import Activity from "@/components/Activity";
 import Btn from "@/components/Btn";
+import CustomAmountModal from "@/components/CustomAmountModal";
 import Quickadd from "@/components/Quickadd";
 import { BellIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import Entypo from "@expo/vector-icons/Entypo";
-import React from "react";
+import React, { useState } from "react";
 import { FlatList, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Home = () => {
+  const [modalVisible, setModalVisible] = useState(false);
+
   const quickaddData = [
     { id: "1", amount: "250ml" },
     { id: "2", amount: "250ml" },
     { id: "3", amount: "250ml" },
   ];
+
+  const handleAddWater = (amount: string, note: string) => {
+    console.log("Adding water:", amount, "ml", note ? `Note: ${note}` : "");
+    // Add your logic here to save the water intake
+  };
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
@@ -61,6 +69,7 @@ const Home = () => {
             leftIcon={<Entypo name="plus" size={24} color="white" />}
             textStyles="text-white"
             styles="bg-[#0090C8] w-full mt-6 mb-8"
+            action={() => setModalVisible(true)}
           />
         </View>
 
@@ -77,6 +86,12 @@ const Home = () => {
             <Activity amount="500 ml" time="05:00 PM" />
           </View>
         </View>
+
+        <CustomAmountModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          onAdd={handleAddWater}
+        />
       </SafeAreaView>
     </ScrollView>
   );
