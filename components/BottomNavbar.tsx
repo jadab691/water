@@ -1,8 +1,8 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { profile } from "@/utils/constants";
 import { LinearGradient } from "expo-linear-gradient";
 import { usePathname, useRouter } from "expo-router";
 import React from "react";
-import { TouchableOpacity, View } from "react-native";
+import { Image, TouchableOpacity, View } from "react-native";
 import { AwardIcon, CalenderIcon, HomeIcon, SparkleIcon } from "./SVGIcons";
 
 export default function BottomNavbar() {
@@ -79,7 +79,7 @@ export default function BottomNavbar() {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           onPress={() => router.push("/profile")}
           className="items-center"
         >
@@ -88,6 +88,13 @@ export default function BottomNavbar() {
             size={24}
             color={pathname === "/profile" ? "#4893E5" : "#A1A1AA"}
           />
+        </TouchableOpacity> */}
+
+        <TouchableOpacity
+          onPress={() => router.push("/profile")}
+          className={`items-center size-10 rounded-full overflow-hidden border-2 ${pathname === "/profile" ? "border-[#4893E5]" : "border-[#E4E4E7]"}`}
+        >
+          <Image source={profile} className="size-full" resizeMode="contain" />
         </TouchableOpacity>
       </View>
     </View>
