@@ -325,7 +325,7 @@ export default function Profile() {
           {/* Profile Header */}
           <View className="bg-white border border-[#E4E4E7] rounded-2xl flex-row items-center justify-between pl-4 pr-6 py-4 mb-6">
             <View className="flex-row items-center gap-4">
-              <View className="bg-[#F8E150] border-2 border-[rgba(113,113,122,0.08)] rounded-xl overflow-hidden size-[60px]">
+              <View className="border-2 border-[rgba(113,113,122,0.08)] rounded-xl overflow-hidden size-[60px]">
                 <Image
                   source={profile}
                   className="size-[60px]"
@@ -335,7 +335,7 @@ export default function Profile() {
               </View>
               <View className="gap-1">
                 <Text className="text-[#27272A] text-2xl" font="fustat-bold">
-                  Smith Rachel
+                  Ahsan Habib
                 </Text>
                 <Text className="text-[#52525B] text-base">Level-3</Text>
               </View>
