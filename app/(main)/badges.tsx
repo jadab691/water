@@ -33,6 +33,8 @@ const BadgeCard = ({
   const router = useRouter();
 
   const handlePress = () => {
+    if (!completed) return;
+
     router.push({
       pathname: "/(main)/badge-detail",
       params: {
@@ -44,9 +46,11 @@ const BadgeCard = ({
     });
   };
 
+  const CardWrapper = completed ? TouchableOpacity : View;
+
   return (
-    <TouchableOpacity
-      onPress={handlePress}
+    <CardWrapper
+      {...(completed && { onPress: handlePress })}
       className="flex-1 bg-white border border-[#E4E4E7] rounded-xl p-6 items-center gap-4 min-w-[156px]"
     >
       <View
@@ -74,7 +78,7 @@ const BadgeCard = ({
           <CheckCircleIcon />
         </View>
       )}
-    </TouchableOpacity>
+    </CardWrapper>
   );
 };
 
@@ -129,7 +133,7 @@ export default function Badges() {
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-      <SafeAreaView className="flex flex-col flex-1 justify-start bg-[#FAFAFA] px-6 pt-6">
+      <SafeAreaView className="flex flex-col flex-1 justify-start px-6 pt-6">
         <Text className="text-[#27272A] text-2xl mb-6" font="fustat-bold">
           Achievements
         </Text>
