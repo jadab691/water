@@ -29,7 +29,7 @@ const Home = () => {
         <View className="flex flex-row w-full items-center justify-between mb-12">
           <View>
             <Text className="justify-center text-[#27272A]" font="fustat-bold">
-              Hi Smith!
+              Hi Ahsan!
             </Text>
             <Text className="justify-center text-[#3F3F46] text-sm">
               Jan 23, 2024 | Friday
