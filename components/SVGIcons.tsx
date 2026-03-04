@@ -416,3 +416,19 @@ export const NinetyDayStreakIcon = (
     />
   </Svg>
 );
+
+export const CheckCircleIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg width={20} height={20} viewBox="0 0 20 20" fill="none" {...props}>
+    <Path
+      fill="#22C55E"
+      d="M10 0C4.477 0 0 4.477 0 10s4.477 10 10 10 10-4.477 10-10S15.523 0 10 0Z"
+    />
+    <Path
+      stroke="#fff"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M13.75 7.5L8.75 12.5L6.25 10"
+    />
+  </Svg>
+);
