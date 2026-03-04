@@ -11,10 +11,13 @@ import {
 import Text from "@/components/Text";
 import { logo } from "@/utils/constants";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as MediaLibrary from "expo-media-library";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
-import { Image, ScrollView, TouchableOpacity, View } from "react-native";
+import * as Sharing from "expo-sharing";
+import React, { useRef } from "react";
+import { Alert, Image, ScrollView, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { captureRef } from "react-native-view-shot";
 
 const badgeIcons: { [key: string]: React.ReactNode } = {
   "3-days": <ThreeDayStreakIcon width={150} height={150} />,
@@ -28,17 +31,51 @@ const badgeIcons: { [key: string]: React.ReactNode } = {
 export default function BadgeDetail() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const badgeCardRef = useRef<View>(null);
 
   const { title, status, badgeId, unlockDate } = params;
 
-  const handleSaveImage = () => {
-    console.log("Save image");
-    // Add logic to save the badge image
+  const handleSaveImage = async () => {
+    try {
+      // Request permissions
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Please grant permission to save images to your gallery",
+        );
+        return;
+      }
+
+      // Capture the badge card as image
+      const uri = await captureRef(badgeCardRef, {
+        format: "png",
+        quality: 1,
+      });
+
+      // Save to gallery
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Alert.alert("Success", "Badge image saved to gallery!");
+    } catch (error) {
+      console.error("Error saving image:", error);
+      Alert.alert("Error", "Failed to save image");
+    }
   };
 
-  const handleShare = () => {
-    console.log("Share badge");
-    // Add logic to share the badge
+  const handleShare = async () => {
+    try {
+      // Capture the badge card as image
+      const uri = await captureRef(badgeCardRef, {
+        format: "png",
+        quality: 1,
+      });
+
+      // Share the image
+      await Sharing.shareAsync(uri);
+    } catch (error) {
+      console.error("Error sharing image:", error);
+      Alert.alert("Error", "Failed to share image");
+    }
   };
 
   return (
@@ -56,7 +93,11 @@ export default function BadgeDetail() {
         </View>
 
         {/* Badge Card */}
-        <View className="bg-white border border-[#4893E5] rounded-3xl p-12 items-center gap-12 mb-6">
+        <View
+          ref={badgeCardRef}
+          collapsable={false}
+          className="bg-white border border-[#4893E5] rounded-3xl p-12 items-center gap-12 mb-6"
+        >
           {/* App Logo */}
           <View className="flex flex-row items-center justify-center">
             <Image source={logo} className="size-14" resizeMode="contain" />
@@ -101,7 +142,7 @@ export default function BadgeDetail() {
             <View className="flex-row items-center gap-1">
               <Ionicons name="person" size={12} color="#71717A" />
               <Text className="text-[#71717A] text-sm" font="fustat-medium">
-                Smith Rachel
+                Ahsan Habib
               </Text>
             </View>
           </View>
