@@ -87,7 +87,7 @@ export default function BadgeDetail() {
             <ArrowLeftIcon />
           </TouchableOpacity>
           <Text className="text-[#27272A] text-2xl" font="fustat-bold">
-            Share Your Progress
+            Badge Details
           </Text>
           <View style={{ width: 24 }} />
         </View>
