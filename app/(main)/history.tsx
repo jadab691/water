@@ -83,10 +83,7 @@ export default function History() {
                 >
                   {(totalWeek / 1000).toFixed(2)} L
                 </Text>
-                <View
-                  className="h-4 w-0 border-r border-[#E4E4E7]"
-                  style={{ transform: [{ rotate: "90deg" }] }}
-                />
+                <View className="h-4 w-0 border-r border-[#E4E4E7]" />
                 <Text
                   className="text-[#27272A] text-xl text-center"
                   font="fustat-bold"
