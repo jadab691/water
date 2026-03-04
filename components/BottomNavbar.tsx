@@ -11,7 +11,16 @@ export default function BottomNavbar() {
 
   return (
     <View className="backdrop-blur-3xl absolute bottom-0 left-0 right-0">
-      <View className="gap-8 bg-white flex-row justify-around items-center p-6 mt-0 m-4 shadow-2xl rounded-full">
+      <View
+        className="gap-8 bg-white flex-row justify-around items-center p-6 mt-0 m-4 rounded-full"
+        style={{
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.15,
+          shadowRadius: 20,
+          elevation: 10,
+        }}
+      >
         <TouchableOpacity
           onPress={() => router.push("/home")}
           className="items-center"
@@ -21,11 +30,7 @@ export default function BottomNavbar() {
               width: 32,
               height: 32,
             }}
-            className={
-              pathname === "/home"
-                ? "text-blue-500 bg-blue-500"
-                : "text-gray-400"
-            }
+            color={pathname === "/home" ? "#4893E5" : "#A1A1AA"}
           />
         </TouchableOpacity>
 
@@ -38,10 +43,11 @@ export default function BottomNavbar() {
               width: 32,
               height: 32,
             }}
+            color={pathname === "/history" ? "#4893E5" : "#A1A1AA"}
           />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/ai")} className="">
+        <TouchableOpacity onPress={() => router.push("/ai")} className="-mt-4">
           <LinearGradient
             colors={["#4893E5", "#F1639C"]}
             start={{ x: 0, y: 0 }}
@@ -69,6 +75,7 @@ export default function BottomNavbar() {
               width: 32,
               height: 32,
             }}
+            color={pathname === "/badges" ? "#4893E5" : "#A1A1AA"}
           />
         </TouchableOpacity>
 
