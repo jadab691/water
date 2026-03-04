@@ -464,3 +464,88 @@ export const ArrowLeftIcon = (props: ComponentProps<typeof Svg>) => (
     />
   </Svg>
 );
+
+export const EditIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg width={24} height={24} fill="none" {...props}>
+    <Path
+      stroke="#3F3F46"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeMiterlimit={10}
+      strokeWidth={1.5}
+      d="M11 2H9C4 2 2 4 2 9v6c0 5 2 7 7 7h6c5 0 7-2 7-7v-2"
+    />
+    <Path
+      stroke="#3F3F46"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeMiterlimit={10}
+      strokeWidth={1.5}
+      d="M16.04 3.02 8.16 10.9c-.3.3-.6.89-.66 1.32l-.43 3.01c-.16 1.09.61 1.85 1.7 1.7l3.01-.43c.42-.06 1.01-.36 1.32-.66l7.88-7.88c1.36-1.36 2-2.94 0-4.94-2-2-3.58-1.36-4.94 0"
+    />
+    <Path
+      stroke="#3F3F46"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeMiterlimit={10}
+      strokeWidth={1.5}
+      d="M14.91 4.15a7.14 7.14 0 0 0 4.94 4.94"
+      opacity={0.4}
+    />
+  </Svg>
+);
+
+export const ShareIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" {...props}>
+    <Path
+      stroke="#fff"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M16.96 6.17c2 1.39 3.38 3.6 3.66 6.15M3.49 12.37a8.601 8.601 0 0 1 3.6-6.15M8.19 20.94c1.16.59 2.48.92 3.87.92 1.34 0 2.6-.3 3.73-.85M12.06 7.7a2.78 2.78 0 1 0 0-5.56 2.78 2.78 0 0 0 0 5.56ZM4.83 19.92a2.78 2.78 0 1 0 0-5.56 2.78 2.78 0 0 0 0 5.56ZM19.17 19.92a2.78 2.78 0 1 0 0-5.56 2.78 2.78 0 0 0 0 5.56Z"
+    />
+  </Svg>
+);
+
+export const AddIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg width={24} height={24} fill="none" {...props}>
+    <Path
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M6 12h12M12 18V6"
+    />
+  </Svg>
+);
+
+export const LogoutIcon = (props: ComponentProps<typeof Svg>) => (
+  <Svg width={24} height={24} fill="none" {...props}>
+    <Path
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeMiterlimit={10}
+      strokeWidth={1.5}
+      d="M8.9 7.56c.31-3.6 2.16-5.07 6.21-5.07h.13c4.47 0 6.26 1.79 6.26 6.26v6.52c0 4.47-1.79 6.26-6.26 6.26h-.13c-4.02 0-5.87-1.45-6.2-4.99M15 12H3.62M5.85 8.65 2.5 12l3.35 3.35"
+    />
+  </Svg>
+);
+
+export const ArrowDownIcon = (
+  props: ComponentProps<typeof Svg> & { color?: string },
+) => {
+  const color = props.color || "#3F3F46";
+  return (
+    <Svg width={18} height={18} fill="none" {...props}>
+      <Path
+        stroke={color}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeMiterlimit={10}
+        strokeWidth={1.5}
+        d="m14.94 6.713-4.28 4.28a1.49 1.49 0 0 1-2.12 0L4.28 6.713"
+      />
+    </Svg>
+  );
+};
