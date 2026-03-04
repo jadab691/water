@@ -100,7 +100,7 @@ export default function BadgeDetail() {
           end={{ x: 1, y: 1 }}
           style={{
             padding: 0.5,
-            borderRadius: 22.5,
+            borderRadius: 21.5,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
