@@ -1,64 +1,211 @@
 import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
 import Text from "@/components/Text";
-import { Link } from "expo-router";
+import { useAuth, useSignUp } from "@clerk/expo";
+import { Href, Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type FormState = {
-  sid: string | null;
   name: string;
-  email: string | null;
+  email: string;
   password: string;
-  department: string;
-  session: string | null;
-  role: string;
+  confirmPassword: string;
+  code: string;
 };
 
 const SignupEmail = () => {
+  const { signUp, errors, fetchStatus } = useSignUp();
+  const { isSignedIn } = useAuth();
+  const router = useRouter();
+
+  const [generalError, setGeneralError] = useState<string>("");
   const [formState, setFormState] = useState<FormState>({
-    sid: null,
     name: "",
-    email: null,
+    email: "",
     password: "",
-    department: "",
-    session: null,
-    role: "",
+    confirmPassword: "",
+    code: "",
   });
+
+  const isVerifyingEmail =
+    signUp.status === "missing_requirements" &&
+    signUp.unverifiedFields.includes("email_address") &&
+    signUp.missingFields.length === 0;
+
+  const handleSignup = async () => {
+    setGeneralError("");
+
+    if (!formState.name.trim()) {
+      setGeneralError("Please enter your full name.");
+      return;
+    }
+
+    if (!formState.email.trim() || !formState.password) {
+      setGeneralError("Please provide email and password.");
+      return;
+    }
+
+    if (formState.password !== formState.confirmPassword) {
+      setGeneralError("Passwords do not match.");
+      return;
+    }
+
+    const { error } = await signUp.password({
+      emailAddress: formState.email.trim(),
+      password: formState.password,
+    });
+
+    if (error) {
+      setGeneralError(error.longMessage || "Unable to sign up.");
+      return;
+    }
+
+    await signUp.verifications.sendEmailCode();
+  };
+
+  const handleVerify = async () => {
+    setGeneralError("");
+
+    if (!formState.code.trim()) {
+      setGeneralError("Please enter the verification code.");
+      return;
+    }
+
+    await signUp.verifications.verifyEmailCode({
+      code: formState.code.trim(),
+    });
+
+    if (signUp.status === "complete") {
+      await signUp.finalize({
+        navigate: ({ session, decorateUrl }) => {
+          if (session?.currentTask) {
+            return;
+          }
+
+          const url = decorateUrl("/");
+          if (url.startsWith("http") && typeof window !== "undefined") {
+            window.location.href = url;
+          } else {
+            router.push(url as Href);
+          }
+        },
+      });
+      return;
+    }
+
+    setGeneralError("Verification is not complete yet.");
+  };
+
+  if (signUp.status === "complete" || isSignedIn) {
+    return null;
+  }
 
   return (
     <SafeAreaView className="flex flex-col flex-1 items-center justify-center bg-[#F4F4F5] p-6 gap-10">
       <View className="flex gap-12 items-center justify-center rounded-3xl  w-full">
         <View className="flex gap-2">
           <Text className="text-center text-3xl font-bold tracking-tight">
-            Signup
+            {isVerifyingEmail ? "Verify account" : "Signup"}
           </Text>
           <Text className="text-center text-base text-[#71717a] px-14">
-            Create new account to continue using{" "}
+            {isVerifyingEmail
+              ? "Enter the code sent to your email"
+              : "Create new account to continue using "}
             <Text className="font-bold">Smart Hydrate</Text>
           </Text>
         </View>
 
         <View className="flex flex-col gap-5 w-full">
-          <FormInput label="Full Name" value="" styles="bg-white" />
-          <FormInput label="Email Address" value="" styles="bg-white" />
-          <FormInput
-            value={formState.password}
-            label="Set Password"
-            action={(e: any) => setFormState({ ...formState, password: e })}
-            isPassword={true}
-            styles="bg-white"
-          />
-          <FormInput
-            label="Confirm Password"
-            value={formState.password}
-            action={(e: any) => setFormState({ ...formState, password: e })}
-            isPassword={true}
-            styles="bg-white"
-          />
+          {isVerifyingEmail ? (
+            <>
+              <FormInput
+                label="Verification Code"
+                value={formState.code}
+                action={(e: string) => setFormState({ ...formState, code: e })}
+                styles="bg-white"
+              />
 
-          <Btn label="Sign Up" styles="bg-[#0090C8]" textStyles="text-white" />
+              <Btn
+                label={fetchStatus === "fetching" ? "Verifying..." : "Verify"}
+                styles="bg-[#0090C8]"
+                textStyles="text-white"
+                action={handleVerify}
+              />
+              <Btn
+                label="I need a new code"
+                styles="border border-[#E4E4E7] bg-white"
+                action={() => signUp.verifications.sendEmailCode()}
+              />
+            </>
+          ) : (
+            <>
+              <FormInput
+                label="Full Name"
+                value={formState.name}
+                action={(e: string) => setFormState({ ...formState, name: e })}
+                styles="bg-white"
+              />
+              <FormInput
+                label="Email Address"
+                value={formState.email}
+                action={(e: string) => setFormState({ ...formState, email: e })}
+                styles="bg-white"
+              />
+              <FormInput
+                value={formState.password}
+                label="Set Password"
+                action={(e: string) =>
+                  setFormState({ ...formState, password: e })
+                }
+                isPassword={true}
+                styles="bg-white"
+              />
+              <FormInput
+                label="Confirm Password"
+                value={formState.confirmPassword}
+                action={(e: string) =>
+                  setFormState({ ...formState, confirmPassword: e })
+                }
+                isPassword={true}
+                styles="bg-white"
+              />
+
+              <Btn
+                label={fetchStatus === "fetching" ? "Signing Up..." : "Sign Up"}
+                styles="bg-[#0090C8]"
+                textStyles="text-white"
+                action={handleSignup}
+              />
+            </>
+          )}
+
+          {(generalError || errors.global?.length) && (
+            <Text className="text-[#DC2626] text-sm text-center -mt-2">
+              {generalError ||
+                errors.global?.[0]?.longMessage ||
+                errors.global?.[0]?.message}
+            </Text>
+          )}
+
+          {errors.fields.emailAddress && (
+            <Text className="text-[#DC2626] text-sm text-center -mt-2">
+              {errors.fields.emailAddress.message}
+            </Text>
+          )}
+
+          {errors.fields.password && (
+            <Text className="text-[#DC2626] text-sm text-center -mt-2">
+              {errors.fields.password.message}
+            </Text>
+          )}
+
+          {errors.fields.code && (
+            <Text className="text-[#DC2626] text-sm text-center -mt-2">
+              {errors.fields.code.message}
+            </Text>
+          )}
 
           <Link
             href="/login"
@@ -67,6 +214,8 @@ const SignupEmail = () => {
             Already have account?{" "}
             <Text className="font-bold text-[#0090C8]">Log In</Text>
           </Link>
+
+          <View nativeID="clerk-captcha" />
         </View>
       </View>
     </SafeAreaView>
