@@ -12,6 +12,7 @@ import {
 } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import { profile } from "@/utils/constants";
+import { useAuth } from "@clerk/expo";
 import * as Sharing from "expo-sharing";
 import React, { useRef, useState } from "react";
 import {
@@ -33,6 +34,7 @@ type DropdownOption = {
 };
 
 export default function Profile() {
+  const { signOut } = useAuth();
   const achievementsCardRef = useRef<View>(null);
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [reminderSchedule, setReminderSchedule] = useState("30 min");
@@ -263,7 +265,14 @@ export default function Profile() {
       {
         text: "Logout",
         style: "destructive",
-        onPress: () => console.log("Logged out"),
+        onPress: async () => {
+          try {
+            await signOut();
+          } catch (error) {
+            console.error("Error logging out:", error);
+            Alert.alert("Error", "Failed to logout. Please try again.");
+          }
+        },
       },
     ]);
   };
