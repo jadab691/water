@@ -1,29 +1,46 @@
-// import { logo } from "@/utils/constant";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
 import Text from "@/components/Text";
 import { logo } from "@/utils/constants";
+import { useAuth } from "@clerk/expo";
 import { router } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import { useEffect, useState } from "react";
 import { Image, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { QuaDizIcon } from "../components/SVGIcons";
 
+const INTRO_SEEN_KEY = "has_seen_intro_screen";
+
 export default function Index() {
-  // useEffect(() => {
-  //   const checkOnboardingStatus = async () => {
-  //     const hasOnboarded = await AsyncStorage.getItem("hasOnboarded");
-  //     if (hasOnboarded === "true") {
-  //       router.replace("/home");
-  //     }
-  //   };
+  const { isLoaded, isSignedIn } = useAuth();
+  const [isCheckingFirstLaunch, setIsCheckingFirstLaunch] = useState(true);
 
-  //   checkOnboardingStatus();
-  // }, []);
+  useEffect(() => {
+    const checkFirstLaunch = async () => {
+      if (!isLoaded) {
+        return;
+      }
 
-  // const handleGetStarted = async () => {
-  //   // Save a flag in AsyncStorage to indicate that the user has completed onboarding
-  //   await AsyncStorage.setItem("hasOnboarded", "true");
-  //   router.replace("/home");
-  // };
+      const hasSeenIntro = await SecureStore.getItemAsync(INTRO_SEEN_KEY);
+
+      if (hasSeenIntro === "true") {
+        router.replace(isSignedIn ? "/home" : "/login");
+        return;
+      }
+
+      setIsCheckingFirstLaunch(false);
+    };
+
+    checkFirstLaunch();
+  }, [isLoaded, isSignedIn]);
+
+  const handleGetStarted = async () => {
+    await SecureStore.setItemAsync(INTRO_SEEN_KEY, "true");
+    router.replace("/signup");
+  };
+
+  if (isCheckingFirstLaunch) {
+    return null;
+  }
 
   return (
     <SafeAreaView className="flex flex-col flex-1 items-center justify-between bg-[#FAFAFA] p-6">
@@ -45,8 +62,7 @@ export default function Index() {
         </Text>
       </View>
       <TouchableOpacity
-        // onPress={() => handleGetStarted()}
-        onPress={() => router.push("/signup")}
+        onPress={handleGetStarted}
         className="bg-[#0090C8] text-center py-4 w-full rounded-2xl mb-4"
       >
         <Text className=" text-center text-xl font-semibold text-white">
