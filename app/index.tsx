@@ -11,7 +11,9 @@ import { QuaDizIcon } from "../components/SVGIcons";
 const INTRO_SEEN_KEY = "has_seen_intro_screen";
 
 export default function Index() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth({
+    treatPendingAsSignedOut: false,
+  });
   const [isCheckingFirstLaunch, setIsCheckingFirstLaunch] = useState(true);
 
   useEffect(() => {

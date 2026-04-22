@@ -2,9 +2,9 @@ import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
 import { AppleIcon, EmailIcon, GoogleIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
-import { useAuth, useSignIn } from "@clerk/expo";
+import { useAuth, useSessionList, useSignIn } from "@clerk/expo";
 import { Link, Redirect, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,9 +21,27 @@ type FormState = {
   verificationCode: string;
 };
 
+type ClerkLikeError = {
+  longMessage?: string;
+  message?: string;
+  code?: string;
+  errors?: Array<{
+    longMessage?: string;
+    message?: string;
+    code?: string;
+  }>;
+};
+
 const Login = () => {
   const { signIn } = useSignIn();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth({
+    treatPendingAsSignedOut: false,
+  });
+  const {
+    isLoaded: isSessionListLoaded,
+    sessions,
+    setActive,
+  } = useSessionList();
   const router = useRouter();
 
   const hasEmailSecondFactor = signIn.supportedSecondFactors.some(
@@ -69,11 +87,96 @@ const Login = () => {
     verificationCode: "",
   });
 
+  const getClerkErrorMessage = (error: unknown, fallback: string) => {
+    if (!error) {
+      return fallback;
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
+
+    if (typeof error !== "object") {
+      return fallback;
+    }
+
+    const parsedError = error as ClerkLikeError;
+
+    if (parsedError.longMessage || parsedError.message) {
+      return parsedError.longMessage || parsedError.message || fallback;
+    }
+
+    if (parsedError.errors?.length) {
+      const detailedErrors = parsedError.errors
+        .map((item) => item.longMessage || item.message || item.code)
+        .filter(Boolean)
+        .join("\n");
+
+      if (detailedErrors) {
+        return detailedErrors;
+      }
+    }
+
+    return fallback;
+  };
+
+  const isAlreadySignedInError = (error: unknown) => {
+    if (!error || typeof error !== "object") {
+      return false;
+    }
+
+    const parsedError = error as ClerkLikeError;
+    const topLevelCode = parsedError.code?.toLowerCase() || "";
+    const nestedCodes =
+      parsedError.errors
+        ?.map((item) => (item.code || "").toLowerCase())
+        .filter(Boolean) || [];
+
+    const allCodes = [topLevelCode, ...nestedCodes];
+
+    return allCodes.some(
+      (code) =>
+        code === "session_exists" ||
+        code === "already_signed_in" ||
+        code.includes("session_exists") ||
+        code.includes("already_signed"),
+    );
+  };
+
+  const recoverExistingSession = async () => {
+    if (!isSessionListLoaded || !setActive || !sessions?.length) {
+      return false;
+    }
+
+    try {
+      const targetSession = sessions[0];
+      if (!targetSession) {
+        return false;
+      }
+
+      await setActive({ session: targetSession.id });
+      router.replace("/home");
+      return true;
+    } catch (error) {
+      setGeneralError(
+        getClerkErrorMessage(
+          error,
+          "Found a session, but failed to activate it. Please login again.",
+        ),
+      );
+      return false;
+    }
+  };
+
   const finalizeSession = async () => {
+    if (signIn.status !== "complete" || !signIn.createdSessionId) {
+      return await recoverExistingSession();
+    }
+
     const { error: finalizeError } = await signIn.finalize();
     if (finalizeError) {
       setGeneralError(
-        finalizeError.longMessage || "Failed to create active session.",
+        getClerkErrorMessage(finalizeError, "Failed to create active session."),
       );
       return false;
     }
@@ -81,6 +184,31 @@ const Login = () => {
     router.replace("/home");
     return true;
   };
+
+  useEffect(() => {
+    const recoverSessionIfPossible = async () => {
+      if (!isLoaded || !signIn || isSignedIn) {
+        return;
+      }
+
+      if (signIn.status === "complete") {
+        await finalizeSession();
+        return;
+      }
+
+      if (isSessionListLoaded && sessions?.length) {
+        await finalizeSession();
+      }
+    };
+
+    recoverSessionIfPossible();
+  }, [
+    isLoaded,
+    isSignedIn,
+    isSessionListLoaded,
+    sessions?.length,
+    signIn.status,
+  ]);
 
   const prepareSecondFactor = async () => {
     const secondFactorStrategies = signIn.supportedSecondFactors.map(
@@ -91,7 +219,7 @@ const Login = () => {
       const { error } = await signIn.mfa.sendEmailCode();
       if (error) {
         setGeneralError(
-          error.longMessage || "Failed to send verification code.",
+          getClerkErrorMessage(error, "Failed to send verification code."),
         );
         return false;
       }
@@ -109,7 +237,7 @@ const Login = () => {
       const { error } = await signIn.mfa.sendPhoneCode();
       if (error) {
         setGeneralError(
-          error.longMessage || "Failed to send verification code.",
+          getClerkErrorMessage(error, "Failed to send verification code."),
         );
         return false;
       }
@@ -155,13 +283,28 @@ const Login = () => {
     }
 
     try {
+      // Always start from a clean SignIn state so stale attempts do not trap the flow.
+      await signIn.reset();
+
       const { error } = await signIn.password({
         emailAddress: formState.email.trim(),
         password: formState.password,
       });
 
       if (error) {
-        setGeneralError(error.longMessage || "Login failed. Please try again.");
+        if (isAlreadySignedInError(error)) {
+          const recovered = await recoverExistingSession();
+          if (recovered) {
+            return;
+          }
+
+          setGeneralError(
+            "Clerk reports an existing session, but it could not be activated locally. Please tap Start Over and log in again.",
+          );
+          return;
+        }
+
+        setGeneralError(getClerkErrorMessage(error, "Login failed."));
         return;
       }
 
@@ -183,15 +326,22 @@ const Login = () => {
       }
 
       setGeneralError(
-        "Additional verification is required to complete sign-in.",
+        `Sign-in requires additional verification (${signIn.status}).`,
       );
     } catch (error: any) {
-      const errorMessage =
-        error?.errors?.[0]?.longMessage ||
-        error?.errors?.[0]?.message ||
-        error?.message ||
-        "Login failed. Please try again.";
-      setGeneralError(errorMessage);
+      if (isAlreadySignedInError(error)) {
+        const recovered = await recoverExistingSession();
+        if (recovered) {
+          return;
+        }
+
+        setGeneralError(
+          "Clerk reports an existing session, but it could not be activated locally. Please tap Start Over and log in again.",
+        );
+        return;
+      }
+
+      setGeneralError(getClerkErrorMessage(error, "Login failed."));
     } finally {
       setIsLoading(false);
     }
@@ -236,9 +386,7 @@ const Login = () => {
 
       if (response.error) {
         setGeneralError(
-          response.error.longMessage ||
-            response.error.message ||
-            "Invalid verification code.",
+          getClerkErrorMessage(response.error, "Invalid verification code."),
         );
         return;
       }
@@ -250,12 +398,7 @@ const Login = () => {
 
       setGeneralError("Verification is not complete yet. Please try again.");
     } catch (error: any) {
-      setGeneralError(
-        error?.errors?.[0]?.longMessage ||
-          error?.errors?.[0]?.message ||
-          error?.message ||
-          "Verification failed. Please try again.",
-      );
+      setGeneralError(getClerkErrorMessage(error, "Verification failed."));
     } finally {
       setIsLoading(false);
     }
@@ -274,7 +417,7 @@ const Login = () => {
         const { error } = await signIn.mfa.sendEmailCode();
         if (error) {
           setGeneralError(
-            error.longMessage || "Failed to resend verification code.",
+            getClerkErrorMessage(error, "Failed to resend verification code."),
           );
           return;
         }
@@ -290,7 +433,7 @@ const Login = () => {
         const { error } = await signIn.mfa.sendPhoneCode();
         if (error) {
           setGeneralError(
-            error.longMessage || "Failed to resend verification code.",
+            getClerkErrorMessage(error, "Failed to resend verification code."),
           );
           return;
         }
@@ -316,7 +459,9 @@ const Login = () => {
     try {
       const { error } = await signIn.reset();
       if (error) {
-        setGeneralError(error.longMessage || "Failed to reset login flow.");
+        setGeneralError(
+          getClerkErrorMessage(error, "Failed to reset login flow."),
+        );
         return;
       }
 
@@ -342,7 +487,7 @@ const Login = () => {
         const { error } = await signIn.mfa.sendEmailCode();
         if (error) {
           setGeneralError(
-            error.longMessage || "Failed to send verification code.",
+            getClerkErrorMessage(error, "Failed to send verification code."),
           );
           return;
         }
@@ -360,7 +505,7 @@ const Login = () => {
       const { error } = await signIn.mfa.sendPhoneCode();
       if (error) {
         setGeneralError(
-          error.longMessage || "Failed to send verification code.",
+          getClerkErrorMessage(error, "Failed to send verification code."),
         );
         return;
       }

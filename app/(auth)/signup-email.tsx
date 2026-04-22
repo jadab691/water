@@ -2,7 +2,7 @@ import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
 import Text from "@/components/Text";
 import { useAuth, useSignUp } from "@clerk/expo";
-import { Href, Link, useRouter } from "expo-router";
+import { Href, Link, Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,12 +15,24 @@ type FormState = {
   code: string;
 };
 
+type ClerkLikeError = {
+  longMessage?: string;
+  message?: string;
+  code?: string;
+  errors?: Array<{
+    longMessage?: string;
+    message?: string;
+    code?: string;
+  }>;
+};
+
 const SignupEmail = () => {
   const { signUp, errors, fetchStatus } = useSignUp();
   const { isSignedIn } = useAuth();
   const router = useRouter();
 
   const [generalError, setGeneralError] = useState<string>("");
+  const [infoMessage, setInfoMessage] = useState<string>("");
   const [formState, setFormState] = useState<FormState>({
     name: "",
     email: "",
@@ -29,6 +41,39 @@ const SignupEmail = () => {
     code: "",
   });
 
+  const getClerkErrorMessage = (error: unknown, fallback: string) => {
+    if (!error) {
+      return fallback;
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
+
+    if (typeof error !== "object") {
+      return fallback;
+    }
+
+    const parsedError = error as ClerkLikeError;
+
+    if (parsedError.longMessage || parsedError.message) {
+      return parsedError.longMessage || parsedError.message || fallback;
+    }
+
+    if (parsedError.errors?.length) {
+      const detailedErrors = parsedError.errors
+        .map((item) => item.longMessage || item.message || item.code)
+        .filter(Boolean)
+        .join("\n");
+
+      if (detailedErrors) {
+        return detailedErrors;
+      }
+    }
+
+    return fallback;
+  };
+
   const isVerifyingEmail =
     signUp.status === "missing_requirements" &&
     signUp.unverifiedFields.includes("email_address") &&
@@ -36,6 +81,7 @@ const SignupEmail = () => {
 
   const handleSignup = async () => {
     setGeneralError("");
+    setInfoMessage("");
 
     if (!formState.name.trim()) {
       setGeneralError("Please enter your full name.");
@@ -52,54 +98,78 @@ const SignupEmail = () => {
       return;
     }
 
-    const { error } = await signUp.password({
-      emailAddress: formState.email.trim(),
-      password: formState.password,
-    });
+    try {
+      const { error } = await signUp.password({
+        emailAddress: formState.email.trim(),
+        password: formState.password,
+      });
 
-    if (error) {
-      setGeneralError(error.longMessage || "Unable to sign up.");
-      return;
+      if (error) {
+        setGeneralError(getClerkErrorMessage(error, "Unable to sign up."));
+        return;
+      }
+
+      await signUp.verifications.sendEmailCode();
+      setInfoMessage("Verification code sent. Please check your email.");
+    } catch (error) {
+      setGeneralError(getClerkErrorMessage(error, "Unable to sign up."));
     }
-
-    await signUp.verifications.sendEmailCode();
   };
 
   const handleVerify = async () => {
     setGeneralError("");
+    setInfoMessage("");
 
     if (!formState.code.trim()) {
       setGeneralError("Please enter the verification code.");
       return;
     }
 
-    await signUp.verifications.verifyEmailCode({
-      code: formState.code.trim(),
-    });
-
-    if (signUp.status === "complete") {
-      await signUp.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            return;
-          }
-
-          const url = decorateUrl("/");
-          if (url.startsWith("http") && typeof window !== "undefined") {
-            window.location.href = url;
-          } else {
-            router.push(url as Href);
-          }
-        },
+    try {
+      await signUp.verifications.verifyEmailCode({
+        code: formState.code.trim(),
       });
-      return;
-    }
 
-    setGeneralError("Verification is not complete yet.");
+      if (signUp.status === "complete") {
+        await signUp.finalize({
+          navigate: ({ session, decorateUrl }) => {
+            if (session?.currentTask) {
+              return;
+            }
+
+            const url = decorateUrl("/");
+            if (url.startsWith("http") && typeof window !== "undefined") {
+              window.location.href = url;
+            } else {
+              router.push(url as Href);
+            }
+          },
+        });
+        return;
+      }
+
+      setGeneralError(`Verification is not complete (${signUp.status}).`);
+    } catch (error) {
+      setGeneralError(getClerkErrorMessage(error, "Verification failed."));
+    }
+  };
+
+  const handleResendCode = async () => {
+    setGeneralError("");
+    setInfoMessage("");
+
+    try {
+      await signUp.verifications.sendEmailCode();
+      setInfoMessage("A new verification code was sent to your email.");
+    } catch (error) {
+      setGeneralError(
+        getClerkErrorMessage(error, "Failed to resend verification code."),
+      );
+    }
   };
 
   if (signUp.status === "complete" || isSignedIn) {
-    return null;
+    return <Redirect href="/home" />;
   }
 
   return (
@@ -136,7 +206,7 @@ const SignupEmail = () => {
               <Btn
                 label="I need a new code"
                 styles="border border-[#E4E4E7] bg-white"
-                action={() => signUp.verifications.sendEmailCode()}
+                action={handleResendCode}
               />
             </>
           ) : (
@@ -179,6 +249,12 @@ const SignupEmail = () => {
                 action={handleSignup}
               />
             </>
+          )}
+
+          {infoMessage && (
+            <Text className="text-[#0C4A6E] text-sm text-center -mt-2">
+              {infoMessage}
+            </Text>
           )}
 
           {(generalError || errors.global?.length) && (

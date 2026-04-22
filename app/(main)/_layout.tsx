@@ -4,7 +4,9 @@ import { Redirect, Stack } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
 export default function RootLayout() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth({
+    treatPendingAsSignedOut: false,
+  });
 
   if (!isLoaded) {
     return (
