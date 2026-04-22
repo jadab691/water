@@ -17,6 +17,7 @@ import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -37,6 +38,7 @@ type DropdownOption = {
 export default function Profile() {
   const { signOut } = useAuth();
   const achievementsCardRef = useRef<View>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [reminderSchedule, setReminderSchedule] = useState("30 min");
   const [reminderSound, setReminderSound] = useState("Water drop sound");
@@ -268,10 +270,12 @@ export default function Profile() {
         style: "destructive",
         onPress: async () => {
           try {
+            setIsLoggingOut(true);
             await signOut();
             router.replace("/login");
           } catch (error) {
             console.error("Error logging out:", error);
+            setIsLoggingOut(false);
             Alert.alert("Error", "Failed to logout. Please try again.");
           }
         },
@@ -724,12 +728,24 @@ export default function Profile() {
           {/* Logout Button */}
           <TouchableOpacity
             onPress={handleLogout}
-            className="border border-[#D4D4D8] rounded-2xl py-4 flex-row items-center justify-center gap-2"
+            disabled={isLoggingOut}
+            className={`border rounded-2xl py-4 flex-row items-center justify-center gap-2 ${
+              isLoggingOut ? "border-[#D4D4D8] opacity-50" : "border-[#D4D4D8]"
+            }`}
           >
-            <LogoutIcon color="#C20E4D" width={24} height={24} />
-            <Text className="text-[#C20E4D] text-base" font="fustat-semibold">
-              Logout
-            </Text>
+            {isLoggingOut ? (
+              <ActivityIndicator size="small" color="#C20E4D" />
+            ) : (
+              <>
+                <LogoutIcon color="#C20E4D" width={24} height={24} />
+                <Text
+                  className="text-[#C20E4D] text-base"
+                  font="fustat-semibold"
+                >
+                  Logout
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </SafeAreaView>
       </ScrollView>
