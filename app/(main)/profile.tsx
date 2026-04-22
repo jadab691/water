@@ -13,6 +13,7 @@ import {
 import Text from "@/components/Text";
 import { profile } from "@/utils/constants";
 import { useAuth } from "@clerk/expo";
+import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useRef, useState } from "react";
 import {
@@ -268,6 +269,7 @@ export default function Profile() {
         onPress: async () => {
           try {
             await signOut();
+            router.replace("/login");
           } catch (error) {
             console.error("Error logging out:", error);
             Alert.alert("Error", "Failed to logout. Please try again.");
