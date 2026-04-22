@@ -1,8 +1,23 @@
 import BottomNavbar from "@/components/BottomNavbar";
-import { Stack } from "expo-router";
-import { View } from "react-native";
+import { useAuth } from "@clerk/expo";
+import { Redirect, Stack } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
 
 export default function RootLayout() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  if (!isLoaded) {
+    return (
+      <View className="flex-1 bg-[#FAFAFA] justify-center items-center">
+        <ActivityIndicator size="large" color="#0090C8" />
+      </View>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <Redirect href={"/login"} />;
+  }
+
   return (
     <View className="flex-1 bg-[#FAFAFA]">
       <Stack

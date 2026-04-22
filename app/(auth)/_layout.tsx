@@ -1,16 +1,27 @@
 import { useAuth } from "@clerk/expo";
 import { Redirect, Stack } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
 
 export default function AuthRoutesLayout() {
   const { isSignedIn, isLoaded } = useAuth();
 
   if (!isLoaded) {
-    return null;
+    return (
+      <View className="flex-1 bg-[#F4F4F5] justify-center items-center">
+        <ActivityIndicator size="large" color="#0090C8" />
+      </View>
+    );
   }
 
   if (isSignedIn) {
     return <Redirect href={"/home"} />;
   }
 
-  return <Stack />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    />
+  );
 }
