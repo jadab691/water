@@ -1,6 +1,6 @@
 import React from "react";
+import { TouchableOpacity } from "react-native";
 import Text from "./Text";
-import {  TouchableOpacity } from "react-native";
 
 interface BtnProps {
   label: string;
@@ -9,6 +9,7 @@ interface BtnProps {
   action?: Function;
   styles?: React.HTMLAttributes<HTMLElement>["className"];
   textStyles?: React.HTMLAttributes<HTMLElement>["className"];
+  disabled?: boolean;
 }
 
 const Btn = ({
@@ -18,11 +19,13 @@ const Btn = ({
   action,
   styles,
   textStyles,
+  disabled = false,
 }: BtnProps) => {
   return (
     <TouchableOpacity
-      onPressIn={() => action && action()}
-      className={`flex flex-row gap-2 items-center justify-center bg-primary px-6 py-4  text-center rounded-2xl ${styles}`}
+      onPressIn={() => !disabled && action && action()}
+      disabled={disabled}
+      className={`flex flex-row gap-2 items-center justify-center bg-primary px-6 py-4  text-center rounded-2xl ${styles} ${disabled ? "opacity-50" : ""}`}
     >
       {leftIcon && leftIcon}
       <Text className={textStyles}>{label}</Text>

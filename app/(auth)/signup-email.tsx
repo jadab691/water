@@ -1,8 +1,9 @@
 import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
 import Text from "@/components/Text";
+import { apiClient } from "@/utils/api";
 import { useAuth, useSignUp } from "@clerk/expo";
-import { Href, Link, Redirect, useRouter } from "expo-router";
+import { Link, Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,24 +16,15 @@ type FormState = {
   code: string;
 };
 
-type ClerkLikeError = {
-  longMessage?: string;
-  message?: string;
-  code?: string;
-  errors?: Array<{
-    longMessage?: string;
-    message?: string;
-    code?: string;
-  }>;
-};
-
 const SignupEmail = () => {
-  const { signUp, errors, fetchStatus } = useSignUp();
-  const { isSignedIn } = useAuth();
   const router = useRouter();
+  const { isSignedIn } = useAuth();
+  const { signUp } = useSignUp();
 
   const [generalError, setGeneralError] = useState<string>("");
   const [infoMessage, setInfoMessage] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   const [formState, setFormState] = useState<FormState>({
     name: "",
     email: "",
@@ -41,134 +33,155 @@ const SignupEmail = () => {
     code: "",
   });
 
-  const getClerkErrorMessage = (error: unknown, fallback: string) => {
-    if (!error) {
-      return fallback;
-    }
-
-    if (typeof error === "string") {
-      return error;
-    }
-
-    if (typeof error !== "object") {
-      return fallback;
-    }
-
-    const parsedError = error as ClerkLikeError;
-
-    if (parsedError.longMessage || parsedError.message) {
-      return parsedError.longMessage || parsedError.message || fallback;
-    }
-
-    if (parsedError.errors?.length) {
-      const detailedErrors = parsedError.errors
-        .map((item) => item.longMessage || item.message || item.code)
-        .filter(Boolean)
-        .join("\n");
-
-      if (detailedErrors) {
-        return detailedErrors;
-      }
-    }
-
-    return fallback;
-  };
-
-  const isVerifyingEmail =
-    signUp.status === "missing_requirements" &&
-    signUp.unverifiedFields.includes("email_address") &&
-    signUp.missingFields.length === 0;
-
   const handleSignup = async () => {
     setGeneralError("");
     setInfoMessage("");
+    setIsLoading(true);
 
     if (!formState.name.trim()) {
       setGeneralError("Please enter your full name.");
+      setIsLoading(false);
       return;
     }
 
-    if (!formState.email.trim() || !formState.password) {
-      setGeneralError("Please provide email and password.");
+    if (!formState.email.trim()) {
+      setGeneralError("Please enter your email address.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formState.password) {
+      setGeneralError("Please enter your password.");
+      setIsLoading(false);
       return;
     }
 
     if (formState.password !== formState.confirmPassword) {
       setGeneralError("Passwords do not match.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (formState.password.length < 8) {
+      setGeneralError("Password must be at least 8 characters.");
+      setIsLoading(false);
       return;
     }
 
     try {
-      const { error } = await signUp.password({
+      const passwordResult = await signUp.password({
         emailAddress: formState.email.trim(),
         password: formState.password,
+        firstName: formState.name.split(" ")[0],
+        lastName:
+          formState.name.split(" ").slice(1).join(" ") ||
+          formState.name.split(" ")[0],
       });
 
-      if (error) {
-        setGeneralError(getClerkErrorMessage(error, "Unable to sign up."));
+      if (passwordResult.error) {
+        setGeneralError(passwordResult.error.message || "Signup failed.");
+        setIsLoading(false);
         return;
       }
 
-      await signUp.verifications.sendEmailCode();
-      setInfoMessage("Verification code sent. Please check your email.");
+      const sendCodeResult = await signUp.verifications.sendEmailCode();
+      if (sendCodeResult.error) {
+        setGeneralError(
+          sendCodeResult.error.message || "Failed to send verification code.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      setIsVerifyingEmail(true);
+      setInfoMessage("Verification code sent to your email.");
+      setIsLoading(false);
     } catch (error) {
-      setGeneralError(getClerkErrorMessage(error, "Unable to sign up."));
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      setGeneralError(errorMessage);
+      setIsLoading(false);
     }
   };
 
-  const handleVerify = async () => {
+  const handleVerifyEmail = async () => {
     setGeneralError("");
     setInfoMessage("");
+    setIsLoading(true);
 
     if (!formState.code.trim()) {
       setGeneralError("Please enter the verification code.");
+      setIsLoading(false);
       return;
     }
 
     try {
-      await signUp.verifications.verifyEmailCode({
+      const verifyResult = await signUp.verifications.verifyEmailCode({
         code: formState.code.trim(),
       });
-
-      if (signUp.status === "complete") {
-        await signUp.finalize({
-          navigate: ({ session, decorateUrl }) => {
-            if (session?.currentTask) {
-              return;
-            }
-
-            const url = decorateUrl("/");
-            if (url.startsWith("http") && typeof window !== "undefined") {
-              window.location.href = url;
-            } else {
-              router.push(url as Href);
-            }
-          },
-        });
+      if (verifyResult.error) {
+        setGeneralError(
+          verifyResult.error.message || "Invalid verification code.",
+        );
+        setIsLoading(false);
         return;
       }
 
-      setGeneralError(`Verification is not complete (${signUp.status}).`);
-    } catch (error) {
-      setGeneralError(getClerkErrorMessage(error, "Verification failed."));
-    }
-  };
+      const finalizeResult = await signUp.finalize();
+      if (finalizeResult.error) {
+        setGeneralError(
+          finalizeResult.error.message || "Failed to finalize signup.",
+        );
+        setIsLoading(false);
+        return;
+      }
 
-  const handleResendCode = async () => {
-    setGeneralError("");
-    setInfoMessage("");
+      const clerkUserId = signUp.createdUserId;
 
-    try {
-      await signUp.verifications.sendEmailCode();
-      setInfoMessage("A new verification code was sent to your email.");
-    } catch (error) {
-      setGeneralError(
-        getClerkErrorMessage(error, "Failed to resend verification code."),
+      if (!clerkUserId) {
+        setGeneralError("Verification incomplete. Please check your code.");
+        setIsLoading(false);
+        return;
+      }
+
+      const backendResponse = await apiClient.makeRequest(
+        "/api/users/initialize-profile",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            clerkUserId,
+            email: formState.email.trim(),
+            firstName: formState.name.split(" ")[0],
+            lastName:
+              formState.name.split(" ").slice(1).join(" ") ||
+              formState.name.split(" ")[0],
+          }),
+        },
       );
+
+      if (!backendResponse.success) {
+        setGeneralError(
+          backendResponse.message ||
+            "Unable to save profile. Please try again.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      setInfoMessage("Account created! Redirecting to home...");
+      setTimeout(() => {
+        router.replace("/home");
+      }, 1200);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      setGeneralError(errorMessage);
+      setIsLoading(false);
     }
   };
 
-  if (signUp.status === "complete" || isSignedIn) {
+  // Check if already authenticated and redirect
+  if (isSignedIn) {
     return <Redirect href="/home" />;
   }
 
@@ -177,79 +190,66 @@ const SignupEmail = () => {
       <View className="flex gap-12 items-center justify-center rounded-3xl  w-full">
         <View className="flex gap-2">
           <Text className="text-center text-3xl font-bold tracking-tight">
-            {isVerifyingEmail ? "Verify account" : "Signup"}
+            Signup
           </Text>
           <Text className="text-center text-base text-[#71717a] px-14">
-            {isVerifyingEmail
-              ? "Enter the code sent to your email"
-              : "Create new account to continue using "}
+            Create new account to continue using{" "}
             <Text className="font-bold">Smart Hydrate</Text>
           </Text>
         </View>
 
         <View className="flex flex-col gap-5 w-full">
-          {isVerifyingEmail ? (
-            <>
-              <FormInput
-                label="Verification Code"
-                value={formState.code}
-                action={(e: string) => setFormState({ ...formState, code: e })}
-                styles="bg-white"
-              />
+          <FormInput
+            label="Full Name"
+            value={formState.name}
+            action={(e: string) => setFormState({ ...formState, name: e })}
+            styles="bg-white"
+          />
+          <FormInput
+            label="Email Address"
+            value={formState.email}
+            action={(e: string) => setFormState({ ...formState, email: e })}
+            styles="bg-white"
+          />
+          <FormInput
+            value={formState.password}
+            label="Set Password"
+            action={(e: string) => setFormState({ ...formState, password: e })}
+            isPassword={true}
+            styles="bg-white"
+          />
+          <FormInput
+            label="Confirm Password"
+            value={formState.confirmPassword}
+            action={(e: string) =>
+              setFormState({ ...formState, confirmPassword: e })
+            }
+            isPassword={true}
+            styles="bg-white"
+          />
 
-              <Btn
-                label={fetchStatus === "fetching" ? "Verifying..." : "Verify"}
-                styles="bg-[#0090C8]"
-                textStyles="text-white"
-                action={handleVerify}
-              />
-              <Btn
-                label="I need a new code"
-                styles="border border-[#E4E4E7] bg-white"
-                action={handleResendCode}
-              />
-            </>
-          ) : (
-            <>
-              <FormInput
-                label="Full Name"
-                value={formState.name}
-                action={(e: string) => setFormState({ ...formState, name: e })}
-                styles="bg-white"
-              />
-              <FormInput
-                label="Email Address"
-                value={formState.email}
-                action={(e: string) => setFormState({ ...formState, email: e })}
-                styles="bg-white"
-              />
-              <FormInput
-                value={formState.password}
-                label="Set Password"
-                action={(e: string) =>
-                  setFormState({ ...formState, password: e })
-                }
-                isPassword={true}
-                styles="bg-white"
-              />
-              <FormInput
-                label="Confirm Password"
-                value={formState.confirmPassword}
-                action={(e: string) =>
-                  setFormState({ ...formState, confirmPassword: e })
-                }
-                isPassword={true}
-                styles="bg-white"
-              />
-
-              <Btn
-                label={fetchStatus === "fetching" ? "Signing Up..." : "Sign Up"}
-                styles="bg-[#0090C8]"
-                textStyles="text-white"
-                action={handleSignup}
-              />
-            </>
+          {isVerifyingEmail && (
+            <FormInput
+              label="Email Verification Code"
+              value={formState.code}
+              action={(e: string) => setFormState({ ...formState, code: e })}
+              styles="bg-white"
+            />
           )}
+
+          <Btn
+            label={
+              isLoading
+                ? "Please wait..."
+                : isVerifyingEmail
+                  ? "Verify Email"
+                  : "Sign Up"
+            }
+            styles="bg-[#0090C8]"
+            textStyles="text-white"
+            action={isVerifyingEmail ? handleVerifyEmail : handleSignup}
+            disabled={isLoading}
+          />
 
           {infoMessage && (
             <Text className="text-[#0C4A6E] text-sm text-center -mt-2">
@@ -257,29 +257,9 @@ const SignupEmail = () => {
             </Text>
           )}
 
-          {(generalError || errors.global?.length) && (
+          {generalError && (
             <Text className="text-[#DC2626] text-sm text-center -mt-2">
-              {generalError ||
-                errors.global?.[0]?.longMessage ||
-                errors.global?.[0]?.message}
-            </Text>
-          )}
-
-          {errors.fields.emailAddress && (
-            <Text className="text-[#DC2626] text-sm text-center -mt-2">
-              {errors.fields.emailAddress.message}
-            </Text>
-          )}
-
-          {errors.fields.password && (
-            <Text className="text-[#DC2626] text-sm text-center -mt-2">
-              {errors.fields.password.message}
-            </Text>
-          )}
-
-          {errors.fields.code && (
-            <Text className="text-[#DC2626] text-sm text-center -mt-2">
-              {errors.fields.code.message}
+              {generalError}
             </Text>
           )}
 
@@ -290,8 +270,6 @@ const SignupEmail = () => {
             Already have account?{" "}
             <Text className="font-bold text-[#0090C8]">Log In</Text>
           </Link>
-
-          <View nativeID="clerk-captcha" />
         </View>
       </View>
     </SafeAreaView>
