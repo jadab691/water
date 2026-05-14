@@ -16,11 +16,12 @@ CREATE TABLE user_profiles (
   id INT PRIMARY KEY AUTO_INCREMENT,
   userId INT NOT NULL UNIQUE,
   name VARCHAR(200) NOT NULL,
+  gender ENUM('Male', 'Female', 'Other') DEFAULT NULL,
   age INT,
   weight DECIMAL(5, 2),
-  activity_level ENUM('sedentary', 'light', 'moderate', 'very_active') DEFAULT 'moderate',
+  activity_level ENUM('Low', 'Medium', 'High', 'Very High') DEFAULT 'Medium',
   daily_goal_ml INT DEFAULT 2000,
-  reminder_enabled BOOLEAN DEFAULT TRUE,
+  weight_unit ENUM('kg', 'lbs') DEFAULT 'kg',
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
@@ -111,6 +112,21 @@ CREATE TABLE quick_add_presets (
   INDEX idx_user_id (user_id)
 );
 
+-- Cups Table
+CREATE TABLE cups (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  volume INT NOT NULL,
+  unit ENUM('ml', 'oz', 'liters') DEFAULT 'ml',
+  note TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user_id (user_id),
+  INDEX idx_name (name)
+);
+
 -- Goals/Challenges Table
 CREATE TABLE goals (
   id INT PRIMARY KEY AUTO_INCREMENT,
@@ -163,7 +179,10 @@ CREATE TABLE settings (
   id INT PRIMARY KEY AUTO_INCREMENT,
   userId INT NOT NULL UNIQUE,
   reminder_enabled BOOLEAN DEFAULT TRUE,
+  reminder_schedule VARCHAR(50) DEFAULT '30 min',
+  reminder_sound VARCHAR(100) DEFAULT 'Water drop sound',
   unit ENUM('ml', 'oz', 'liters') DEFAULT 'ml',
+  weight_unit ENUM('kg', 'lbs') DEFAULT 'kg',
   notifications_enabled BOOLEAN DEFAULT TRUE,
   theme ENUM('light', 'dark', 'system') DEFAULT 'light',
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -1,11 +1,11 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import React, { useState } from "react";
 import {
-  Modal,
-  Pressable,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Modal,
+    Pressable,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Text from "./Text";
 
@@ -13,12 +13,14 @@ interface CustomAmountModalProps {
   visible: boolean;
   onClose: () => void;
   onAdd: (amount: string, note: string) => void;
+  unit?: string;
 }
 
 export default function CustomAmountModal({
   visible,
   onClose,
   onAdd,
+  unit = "ml",
 }: CustomAmountModalProps) {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -82,7 +84,7 @@ export default function CustomAmountModal({
                   onChangeText={setAmount}
                   keyboardType="numeric"
                 />
-                <Text className="text-[#52525B] text-base">ml</Text>
+                <Text className="text-[#52525B] text-base">{unit}</Text>
               </View>
 
               {/* Note Input */}

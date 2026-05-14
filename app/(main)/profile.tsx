@@ -1,3 +1,4 @@
+import CustomAmountModal from "@/components/CustomAmountModal";
 import {
   AddIcon,
   ArrowDownIcon,
@@ -11,11 +12,12 @@ import {
   TrashIcon,
 } from "@/components/SVGIcons";
 import Text from "@/components/Text";
+import { apiClient } from "@/utils/api";
 import { profile } from "@/utils/constants";
-import { useAuth } from "@clerk/expo";
+import { useAuth, useUser } from "@clerk/expo";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -35,19 +37,38 @@ type DropdownOption = {
   value: string;
 };
 
+type Achievement = {
+  icon: React.ReactNode;
+  title: string;
+  date: string;
+};
+
+type Cup = {
+  id: number;
+  name: string;
+  volume: number;
+  unit: string;
+};
+
 export default function Profile() {
   const { signOut } = useAuth();
+  const { user } = useUser();
   const achievementsCardRef = useRef<View>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [reminderEnabled, setReminderEnabled] = useState(true);
-  const [reminderSchedule, setReminderSchedule] = useState("30 min");
-  const [reminderSound, setReminderSound] = useState("Water drop sound");
-  const [gender, setGender] = useState("Male");
-  const [weight, setWeight] = useState(84);
-  const [dailyGoal, setDailyGoal] = useState(2000);
-  const [waterUnit, setWaterUnit] = useState("ml");
-  const [weightUnit, setWeightUnit] = useState("kg");
-  const [activityLevel, setActivityLevel] = useState("Medium");
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profileLevel, setProfileLevel] = useState("");
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderSchedule, setReminderSchedule] = useState("");
+  const [reminderSound, setReminderSound] = useState("");
+  const [gender, setGender] = useState("");
+  const [weight, setWeight] = useState<number | null>(null);
+  const [dailyGoal, setDailyGoal] = useState<number | null>(null);
+  const [waterUnit, setWaterUnit] = useState("");
+  const [weightUnit, setWeightUnit] = useState("");
+  const [activityLevel, setActivityLevel] = useState("");
+  const [showAddCupModal, setShowAddCupModal] = useState(false);
 
   // Dropdown visibility states
   const [showReminderSchedule, setShowReminderSchedule] = useState(false);
@@ -60,8 +81,291 @@ export default function Profile() {
   // Input modal states
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showDailyGoalModal, setShowDailyGoalModal] = useState(false);
-  const [weightInput, setWeightInput] = useState(weight.toString());
-  const [dailyGoalInput, setDailyGoalInput] = useState(dailyGoal.toString());
+  const [weightInput, setWeightInput] = useState("");
+  const [dailyGoalInput, setDailyGoalInput] = useState("");
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [cups, setCups] = useState<Cup[]>([]);
+
+  const getClerkUserId = () => user?.id || "";
+
+  const pickValue = <T,>(...values: Array<T | null | undefined>) =>
+    values.find((value) => value !== null && value !== undefined);
+
+  const loadProfileData = async () => {
+    const clerkUserId = getClerkUserId();
+    if (!clerkUserId) {
+      setIsLoadingProfile(false);
+      return;
+    }
+
+    setIsLoadingProfile(true);
+    try {
+      const [profileRes, achievementsRes, cupsRes] = await Promise.all([
+        apiClient.makeRequest(
+          `/api/users/profile?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+        ),
+        apiClient.makeRequest(
+          `/api/users/achievements?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+        ),
+        apiClient.makeRequest(
+          `/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+        ),
+      ]);
+
+      if (profileRes.success && profileRes.data) {
+        const data = profileRes.data as any;
+        const profileData = data.profile || data;
+        const settingsData = data.settings || data;
+        const generalData = data.general || data;
+
+        const loadedName = pickValue(
+          profileData.name,
+          generalData.name,
+          data.name,
+        );
+        if (loadedName) setProfileName(loadedName);
+
+        const loadedLevel = pickValue(
+          profileData.level,
+          profileData.activityLevel,
+          profileData.activity_level,
+          generalData.level,
+          generalData.activityLevel,
+          generalData.activity_level,
+          data.level,
+          data.activityLevel,
+          data.activity_level,
+        );
+        if (loadedLevel) setProfileLevel(loadedLevel);
+
+        const loadedReminderEnabled = pickValue(
+          settingsData.reminderEnabled,
+          settingsData.reminder_enabled,
+        );
+        if (typeof loadedReminderEnabled === "boolean") {
+          setReminderEnabled(loadedReminderEnabled);
+        }
+        const loadedReminderSchedule = pickValue(
+          settingsData.reminderSchedule,
+          settingsData.reminder_schedule,
+        );
+        if (loadedReminderSchedule) {
+          setReminderSchedule(String(loadedReminderSchedule));
+        }
+        const loadedReminderSound = pickValue(
+          settingsData.reminderSound,
+          settingsData.reminder_sound,
+        );
+        if (loadedReminderSound) {
+          setReminderSound(String(loadedReminderSound));
+        }
+
+        const loadedGender = pickValue(
+          profileData.gender,
+          generalData.gender,
+          data.gender,
+        );
+        if (loadedGender) setGender(String(loadedGender));
+
+        const parseNumber = (v: any): number | null => {
+          if (typeof v === "number") return v;
+          if (typeof v === "string") {
+            const n = parseFloat(v);
+            return Number.isFinite(n) ? n : null;
+          }
+          return null;
+        };
+
+        const loadedWeight =
+          parseNumber(profileData.weight) ??
+          parseNumber(generalData.weight) ??
+          parseNumber(data.weight);
+        if (loadedWeight !== null) {
+          setWeight(loadedWeight);
+          setWeightInput(loadedWeight.toString());
+        }
+
+        const loadedDailyGoal =
+          parseNumber(profileData.dailyGoal) ??
+          parseNumber(profileData.daily_goal_ml) ??
+          parseNumber(generalData.dailyGoal) ??
+          parseNumber(generalData.daily_goal_ml) ??
+          parseNumber(data.dailyGoal) ??
+          parseNumber(data.daily_goal_ml);
+        if (loadedDailyGoal !== null) {
+          setDailyGoal(loadedDailyGoal);
+          setDailyGoalInput(loadedDailyGoal.toString());
+        }
+
+        const loadedWaterUnit = pickValue(
+          profileData.waterUnit,
+          profileData.unit,
+          generalData.waterUnit,
+          generalData.unit,
+          data.waterUnit,
+          data.unit,
+        );
+        if (loadedWaterUnit) setWaterUnit(String(loadedWaterUnit));
+        else setWaterUnit("ml");
+
+        const loadedWeightUnit = pickValue(
+          profileData.weightUnit,
+          profileData.weight_unit,
+          generalData.weightUnit,
+          generalData.weight_unit,
+          data.weightUnit,
+          data.weight_unit,
+        );
+        if (loadedWeightUnit) setWeightUnit(String(loadedWeightUnit));
+        else setWeightUnit("kg");
+
+        const loadedActivityLevel = pickValue(
+          profileData.activityLevel,
+          profileData.activity_level,
+          generalData.activityLevel,
+          generalData.activity_level,
+          data.activityLevel,
+          data.activity_level,
+        );
+        if (loadedActivityLevel) {
+          setActivityLevel(String(loadedActivityLevel));
+          setProfileLevel(String(loadedActivityLevel));
+        }
+      }
+
+      if (achievementsRes.success) {
+        const achievementData = (achievementsRes.data as any) || [];
+        const normalizedAchievements = Array.isArray(achievementData)
+          ? achievementData
+          : Array.isArray(achievementData.achievements)
+            ? achievementData.achievements
+            : Array.isArray(achievementData.data)
+              ? achievementData.data
+              : [];
+
+        setAchievements(
+          normalizedAchievements.map((item: any) => ({
+            icon: getAchievementIcon(item.title || item.name || ""),
+            title: item.title || item.name || "Achievement",
+            date: item.date || item.createdAt || "",
+          })),
+        );
+      }
+
+      if (cupsRes.success) {
+        const cupData = (cupsRes.data as any) || [];
+        const normalizedCups = Array.isArray(cupData)
+          ? cupData
+          : Array.isArray(cupData.cups)
+            ? cupData.cups
+            : Array.isArray(cupData.data)
+              ? cupData.data
+              : [];
+
+        setCups(
+          normalizedCups.map((item: any) => ({
+            id: Number(item.id),
+            name: item.name,
+            volume: Number(item.volume ?? item.amount ?? 0),
+            unit: item.unit || waterUnit || "ml",
+          })),
+        );
+      }
+    } catch (error) {
+      console.error("Error loading profile data:", error);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  const handleReminderToggle = (value: boolean) => {
+    setReminderEnabled(value);
+    saveReminderData({ reminderEnabled: value });
+  };
+
+  const handleReminderScheduleSelect = (value: string) => {
+    setReminderSchedule(value);
+    saveReminderData({ reminderSchedule: value });
+  };
+
+  const handleReminderSoundSelect = (value: string) => {
+    setReminderSound(value);
+    saveReminderData({ reminderSound: value });
+  };
+
+  const handleWaterUnitSelect = (value: string) => {
+    setWaterUnit(value);
+    saveProfileData({ waterUnit: value });
+  };
+
+  const handleWeightUnitSelect = (value: string) => {
+    setWeightUnit(value);
+    saveProfileData({ weightUnit: value });
+  };
+
+  const handleGenderSelect = (value: string) => {
+    setGender(value);
+    saveProfileData({ gender: value });
+  };
+
+  const handleActivityLevelSelect = (value: string) => {
+    setActivityLevel(value);
+    saveProfileData({ activityLevel: value });
+  };
+
+  useEffect(() => {
+    loadProfileData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const saveProfileData = async (overrides?: Partial<Record<string, any>>) => {
+    const clerkUserId = getClerkUserId();
+    if (!clerkUserId) return;
+
+    setIsSavingProfile(true);
+    const payload = {
+      clerkUserId,
+      gender,
+      weight,
+      dailyGoal,
+      waterUnit: waterUnit || "ml",
+      weightUnit: weightUnit || "kg",
+      activityLevel,
+      ...(overrides || {}),
+    };
+
+    const res = await apiClient.makeRequest("/api/users/profile", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    setIsSavingProfile(false);
+    if (!res.success) {
+      Alert.alert("Error", res.message || "Failed to save profile.");
+    }
+  };
+
+  const saveReminderData = async (overrides?: Partial<Record<string, any>>) => {
+    const clerkUserId = getClerkUserId();
+    if (!clerkUserId) return;
+
+    const payload = {
+      clerkUserId,
+      reminderEnabled,
+      reminderSchedule: reminderSchedule || "30 min",
+      reminderSound: reminderSound || "Water drop sound",
+      ...(overrides || {}),
+    };
+
+    const res = await apiClient.makeRequest("/api/users/reminder-settings", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.success) {
+      Alert.alert("Error", res.message || "Failed to save reminder settings.");
+    }
+  };
 
   // Dropdown options
   const reminderScheduleOptions: DropdownOption[] = [
@@ -105,6 +409,7 @@ export default function Profile() {
     if (!isNaN(value) && value > 0) {
       setWeight(value);
       setShowWeightModal(false);
+      saveProfileData({ weight: value });
     }
   };
 
@@ -113,6 +418,7 @@ export default function Profile() {
     if (!isNaN(value) && value > 0) {
       setDailyGoal(value);
       setShowDailyGoalModal(false);
+      saveProfileData({ dailyGoal: value });
     }
   };
 
@@ -247,19 +553,69 @@ export default function Profile() {
     }
   };
 
-  const handleDeleteCup = (cupName: string) => {
-    Alert.alert("Delete Cup", `Are you sure you want to delete ${cupName}?`, [
+  const handleDeleteCup = (cup: Cup) => {
+    Alert.alert("Delete Cup", `Are you sure you want to delete ${cup.name}?`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
-        onPress: () => console.log(`Deleted ${cupName}`),
+        onPress: async () => {
+          const clerkUserId = getClerkUserId();
+          if (!clerkUserId) return;
+
+          const res = await apiClient.makeRequest(`/api/users/cups/${cup.id}`, {
+            method: "DELETE",
+            body: JSON.stringify({ clerkUserId }),
+          });
+
+          if (res.success) {
+            setCups((prev) => prev.filter((item) => item.id !== cup.id));
+            return;
+          }
+
+          Alert.alert("Error", res.message || "Failed to delete cup.");
+        },
       },
     ]);
   };
 
-  const handleAddCup = () => {
-    Alert.alert("Add Cup", "Add new cup coming soon!");
+  const handleAddCup = async () => {
+    setShowAddCupModal(true);
+  };
+
+  const handleCreateCup = async (amount: string, note: string) => {
+    const clerkUserId = getClerkUserId();
+    if (!clerkUserId) {
+      Alert.alert("Error", "User not authenticated.");
+      return;
+    }
+
+    const volume = parseInt(amount, 10);
+    if (Number.isNaN(volume) || volume <= 0) {
+      Alert.alert("Error", "Please enter a valid amount.");
+      return;
+    }
+
+    const newCupPayload = {
+      clerkUserId,
+      name: `Cup ${cups.length + 1}`,
+      volume,
+      unit: waterUnit || "ml",
+      note,
+    };
+
+    const res = await apiClient.makeRequest("/api/users/cups", {
+      method: "POST",
+      body: JSON.stringify(newCupPayload),
+    });
+
+    if (res.success && res.data) {
+      setCups((prev) => [...prev, res.data as Cup]);
+      setShowAddCupModal(false);
+      return;
+    }
+
+    Alert.alert("Error", res.message || "Failed to add cup.");
   };
 
   const handleLogout = () => {
@@ -283,30 +639,15 @@ export default function Profile() {
     ]);
   };
 
-  const achievements = [
-    {
-      icon: <ThreeDayStreakIcon width={50} height={51} />,
-      date: "24 Jan, 2026",
-      title: "3-days Streak",
-    },
-    {
-      icon: <SevenDayStreakIcon width={50} height={51} />,
-      date: "31 Jan, 2026",
-      title: "7-days Streak",
-    },
-    {
-      icon: <FifteenDayStreakIcon width={50} height={51} />,
-      date: "01 Feb, 2026",
-      title: "15-days Streak",
-    },
-  ];
-
-  const cups = [
-    { name: "Glass", volume: "200ml" },
-    { name: "Mug", volume: "300 ml" },
-    { name: "Bottle M", volume: "500 ml" },
-    { name: "Bottle L", volume: "1000 ml" },
-  ];
+  const getAchievementIcon = (title: string) => {
+    if (title.includes("15")) {
+      return <FifteenDayStreakIcon width={50} height={51} />;
+    }
+    if (title.includes("7")) {
+      return <SevenDayStreakIcon width={50} height={51} />;
+    }
+    return <ThreeDayStreakIcon width={50} height={51} />;
+  };
 
   return (
     <>
@@ -332,6 +673,13 @@ export default function Profile() {
         waterUnit,
       )}
 
+      <CustomAmountModal
+        visible={showAddCupModal}
+        onClose={() => setShowAddCupModal(false)}
+        onAdd={handleCreateCup}
+        unit={waterUnit || "ml"}
+      />
+
       <ScrollView
         className="bg-[#FAFAFA]"
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -350,9 +698,11 @@ export default function Profile() {
               </View>
               <View className="gap-1">
                 <Text className="text-[#27272A] text-2xl" font="fustat-bold">
-                  Ahsan Habib
+                  {profileName || ""}
                 </Text>
-                <Text className="text-[#52525B] text-base">Level-3</Text>
+                <Text className="text-[#52525B] text-base">
+                  {profileLevel || ""}
+                </Text>
               </View>
             </View>
             <TouchableOpacity onPress={handleEditProfile}>
@@ -420,7 +770,7 @@ export default function Profile() {
               </Text>
               <Switch
                 value={reminderEnabled}
-                onValueChange={setReminderEnabled}
+                onValueChange={handleReminderToggle}
                 trackColor={{ false: "#D4D4D8", true: "#0090C8" }}
                 thumbColor="white"
               />
@@ -447,7 +797,7 @@ export default function Profile() {
                     renderDropdown(
                       reminderScheduleOptions,
                       reminderSchedule,
-                      setReminderSchedule,
+                      handleReminderScheduleSelect,
                       () => setShowReminderSchedule(false),
                     )}
                 </View>
@@ -481,7 +831,7 @@ export default function Profile() {
                     renderDropdown(
                       reminderSoundOptions,
                       reminderSound,
-                      setReminderSound,
+                      handleReminderSoundSelect,
                       () => setShowReminderSound(false),
                     )}
                 </View>
@@ -518,8 +868,11 @@ export default function Profile() {
                     <ArrowDownIcon width={18} height={18} />
                   </TouchableOpacity>
                   {showGender &&
-                    renderDropdown(genderOptions, gender, setGender, () =>
-                      setShowGender(false),
+                    renderDropdown(
+                      genderOptions,
+                      gender,
+                      handleGenderSelect,
+                      () => setShowGender(false),
                     )}
                 </View>
               </View>
@@ -527,7 +880,7 @@ export default function Profile() {
                 <Text className="text-[#52525B] text-base">Weight</Text>
                 <TouchableOpacity
                   onPress={() => {
-                    setWeightInput(weight.toString());
+                    setWeightInput(weight?.toString() || "");
                     setShowWeightModal(true);
                   }}
                   className="bg-white border border-[#E4E4E7] rounded-lg px-4 py-2 flex-row items-center gap-2 w-[130px] justify-between"
@@ -536,7 +889,7 @@ export default function Profile() {
                     className="text-[#27272A] text-base"
                     font="fustat-semibold"
                   >
-                    {weight}
+                    {weight ?? ""}
                   </Text>
                   <Text className="text-[#52525B] text-base">{weightUnit}</Text>
                 </TouchableOpacity>
@@ -545,7 +898,7 @@ export default function Profile() {
                 <Text className="text-[#52525B] text-base">Daily Goal</Text>
                 <TouchableOpacity
                   onPress={() => {
-                    setDailyGoalInput(dailyGoal.toString());
+                    setDailyGoalInput(dailyGoal?.toString() || "");
                     setShowDailyGoalModal(true);
                   }}
                   className="bg-white border border-[#E4E4E7] rounded-lg px-4 py-2 flex-row items-center gap-2 w-[130px] justify-between"
@@ -554,7 +907,7 @@ export default function Profile() {
                     className="text-[#27272A] text-base"
                     font="fustat-semibold"
                   >
-                    {dailyGoal}
+                    {dailyGoal ?? ""}
                   </Text>
                   <Text className="text-[#52525B] text-base">{waterUnit}</Text>
                 </TouchableOpacity>
@@ -600,7 +953,7 @@ export default function Profile() {
                         {cup.volume}
                       </Text>
                     </View>
-                    <TouchableOpacity onPress={() => handleDeleteCup(cup.name)}>
+                    <TouchableOpacity onPress={() => handleDeleteCup(cup)}>
                       <TrashIcon width={18} height={18} />
                     </TouchableOpacity>
                   </View>
@@ -653,7 +1006,7 @@ export default function Profile() {
                     renderDropdown(
                       waterUnitOptions,
                       waterUnit,
-                      setWaterUnit,
+                      handleWaterUnitSelect,
                       () => setShowWaterUnit(false),
                     )}
                 </View>
@@ -686,7 +1039,7 @@ export default function Profile() {
                     renderDropdown(
                       weightUnitOptions,
                       weightUnit,
-                      setWeightUnit,
+                      handleWeightUnitSelect,
                       () => setShowWeightUnit(false),
                     )}
                 </View>
@@ -717,7 +1070,7 @@ export default function Profile() {
                     renderDropdown(
                       activityLevelOptions,
                       activityLevel,
-                      setActivityLevel,
+                      handleActivityLevelSelect,
                       () => setShowActivityLevel(false),
                     )}
                 </View>
