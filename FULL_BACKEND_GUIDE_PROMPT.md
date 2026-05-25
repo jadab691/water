@@ -95,7 +95,9 @@ Backend does:
 
 Example backend task description (prompt to backend engineer):
 
-"Remove activity level and unit-selection fields from the user profile and settings. Migrate the system to treat all water amounts (cups, logs, daily goals, statistics) as milliliters and all weights as kilograms. Update DB schema and seed data to remove `activity_level`, `unit`, and `weight_unit` columns (or set them nullable/deprecated), update all endpoints to stop reading/writing these fields, and run a data migration to normalize any legacy values (e.g., convert ounces or lbs if present to ml/kg or ask for manual review if ambiguous). Ensure backward-compatible responses for clients by tolerating but ignoring these deprecated fields for a short deprecation window." 3. Return updated profile data.
+"Remove activity level and unit-selection fields from the user profile and settings. Migrate the system to treat all water amounts (cups, logs, daily goals, statistics) as milliliters and all weights as kilograms. Update DB schema and seed data to remove `activity_level`, `unit`, and `weight_unit` columns (or set them nullable/deprecated), update all endpoints to stop reading/writing these fields, and run a data migration to normalize any legacy values (e.g., convert ounces or lbs if present to ml/kg or ask for manual review if ambiguous). Ensure backward-compatible responses for clients by tolerating but ignoring these deprecated fields for a short deprecation window."
+
+3. Return updated profile data.
 
 ### 4) PUT /api/users/reminder-settings
 
@@ -174,6 +176,36 @@ Backend does:
 
 1. Find user by `clerk_user_id`.
 2. Return achievements/badges list.
+
+Success response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "achievements": [
+      {
+        "badge_id": "3-days",
+        "title": "3-days Streak",
+        "completed": true,
+        "progress": 3,
+        "target": 3,
+        "status": "Completed",
+        "unlock_date": "2026-01-20"
+      },
+      {
+        "badge_id": "30-days",
+        "title": "30-days Streak",
+        "completed": false,
+        "progress": 16,
+        "target": 30,
+        "status": "16/30",
+        "unlock_date": null
+      }
+    ]
+  }
+}
+```
 
 ### 9) GET /api/users/daily-stats
 
@@ -377,10 +409,16 @@ Success response:
 {
   "success": false,
   "message": "Error message",
+  "error": "ERROR_CODE"
+}
+```
 
 Backend implementation prompt (History screen):
 
 "Implement GET /api/users/weekly-stats for the History screen. The endpoint should accept `clerkUserId` and optional `weekStart` (YYYY-MM-DD), calculate the current week (Sunday-Saturday by default), and return a 7-day array with `date`, `day`, and `total_ml` for each day (fill missing days with 0). Include `total_ml`, `average_ml`, and `best_day_ml` in the response. All volumes are milliliters (ml). Weight is stored in kilograms (kg). Do not expose or rely on activity level or unit-selection fields."
-```
+
+Backend implementation prompt (Badges screen):
+
+"Implement GET /api/users/achievements to power the Achievements screen. Return an `achievements` array with `badge_id`, `title`, `completed`, `progress`, `target`, optional `status` (e.g., `Completed` or `16/30`), and `unlock_date` (or null). Use the user's water logs or streak logic to compute progress. All volumes are milliliters (ml). Weight is stored in kilograms (kg). Do not expose or rely on activity level or unit-selection fields."
 
 <!-- New prompt here -->
