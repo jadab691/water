@@ -65,18 +65,14 @@ export default function Profile() {
   const [gender, setGender] = useState("");
   const [weight, setWeight] = useState<number | null>(null);
   const [dailyGoal, setDailyGoal] = useState<number | null>(null);
-  const [waterUnit, setWaterUnit] = useState("");
-  const [weightUnit, setWeightUnit] = useState("");
-  const [activityLevel, setActivityLevel] = useState("");
+  // Units fixed: water in ml, weight in kg
   const [showAddCupModal, setShowAddCupModal] = useState(false);
 
   // Dropdown visibility states
   const [showReminderSchedule, setShowReminderSchedule] = useState(false);
   const [showReminderSound, setShowReminderSound] = useState(false);
   const [showGender, setShowGender] = useState(false);
-  const [showWaterUnit, setShowWaterUnit] = useState(false);
-  const [showWeightUnit, setShowWeightUnit] = useState(false);
-  const [showActivityLevel, setShowActivityLevel] = useState(false);
+  // removed unit/activity dropdown states (units are fixed)
 
   // Input modal states
   const [showWeightModal, setShowWeightModal] = useState(false);
@@ -127,14 +123,8 @@ export default function Profile() {
 
         const loadedLevel = pickValue(
           profileData.level,
-          profileData.activityLevel,
-          profileData.activity_level,
           generalData.level,
-          generalData.activityLevel,
-          generalData.activity_level,
           data.level,
-          data.activityLevel,
-          data.activity_level,
         );
         if (loadedLevel) setProfileLevel(loadedLevel);
 
@@ -197,40 +187,7 @@ export default function Profile() {
           setDailyGoalInput(loadedDailyGoal.toString());
         }
 
-        const loadedWaterUnit = pickValue(
-          profileData.waterUnit,
-          profileData.unit,
-          generalData.waterUnit,
-          generalData.unit,
-          data.waterUnit,
-          data.unit,
-        );
-        if (loadedWaterUnit) setWaterUnit(String(loadedWaterUnit));
-        else setWaterUnit("ml");
-
-        const loadedWeightUnit = pickValue(
-          profileData.weightUnit,
-          profileData.weight_unit,
-          generalData.weightUnit,
-          generalData.weight_unit,
-          data.weightUnit,
-          data.weight_unit,
-        );
-        if (loadedWeightUnit) setWeightUnit(String(loadedWeightUnit));
-        else setWeightUnit("kg");
-
-        const loadedActivityLevel = pickValue(
-          profileData.activityLevel,
-          profileData.activity_level,
-          generalData.activityLevel,
-          generalData.activity_level,
-          data.activityLevel,
-          data.activity_level,
-        );
-        if (loadedActivityLevel) {
-          setActivityLevel(String(loadedActivityLevel));
-          setProfileLevel(String(loadedActivityLevel));
-        }
+        // Units and activity level removed from client state — use fixed units: ml (water), kg (weight)
       }
 
       if (achievementsRes.success) {
@@ -267,7 +224,7 @@ export default function Profile() {
             id: Number(item.id),
             name: item.name,
             volume: Number(item.volume ?? item.amount ?? 0),
-            unit: item.unit || waterUnit || "ml",
+            unit: item.unit || "ml",
           })),
         );
       }
@@ -293,25 +250,14 @@ export default function Profile() {
     saveReminderData({ reminderSound: value });
   };
 
-  const handleWaterUnitSelect = (value: string) => {
-    setWaterUnit(value);
-    saveProfileData({ waterUnit: value });
-  };
-
-  const handleWeightUnitSelect = (value: string) => {
-    setWeightUnit(value);
-    saveProfileData({ weightUnit: value });
-  };
+  // unit selection removed (units are fixed)
 
   const handleGenderSelect = (value: string) => {
     setGender(value);
     saveProfileData({ gender: value });
   };
 
-  const handleActivityLevelSelect = (value: string) => {
-    setActivityLevel(value);
-    saveProfileData({ activityLevel: value });
-  };
+  // activity level removed
 
   useEffect(() => {
     loadProfileData();
@@ -328,9 +274,7 @@ export default function Profile() {
       gender,
       weight,
       dailyGoal,
-      waterUnit: waterUnit || "ml",
-      weightUnit: weightUnit || "kg",
-      activityLevel,
+      // units are fixed on frontend/backend: water -> ml, weight -> kg
       ...(overrides || {}),
     };
 
@@ -387,22 +331,7 @@ export default function Profile() {
     { label: "Other", value: "Other" },
   ];
 
-  const waterUnitOptions: DropdownOption[] = [
-    { label: "ml", value: "ml" },
-    { label: "oz", value: "oz" },
-  ];
-
-  const weightUnitOptions: DropdownOption[] = [
-    { label: "kg", value: "kg" },
-    { label: "lbs", value: "lbs" },
-  ];
-
-  const activityLevelOptions: DropdownOption[] = [
-    { label: "Low", value: "Low" },
-    { label: "Medium", value: "Medium" },
-    { label: "High", value: "High" },
-    { label: "Very High", value: "Very High" },
-  ];
+  // unit and activity options removed (units fixed)
 
   const handleWeightSave = () => {
     const value = parseInt(weightInput);
@@ -528,9 +457,6 @@ export default function Profile() {
     setShowReminderSchedule(!showReminderSchedule);
     setShowReminderSound(false);
     setShowGender(false);
-    setShowWaterUnit(false);
-    setShowWeightUnit(false);
-    setShowActivityLevel(false);
   };
 
   const handleEditProfile = () => {
@@ -600,7 +526,7 @@ export default function Profile() {
       clerkUserId,
       name: `Cup ${cups.length + 1}`,
       volume,
-      unit: waterUnit || "ml",
+      unit: "ml",
       note,
     };
 
@@ -659,7 +585,7 @@ export default function Profile() {
         setWeightInput,
         handleWeightSave,
         () => setShowWeightModal(false),
-        weightUnit,
+        "kg",
       )}
 
       {/* Daily Goal Input Modal */}
@@ -670,14 +596,14 @@ export default function Profile() {
         setDailyGoalInput,
         handleDailyGoalSave,
         () => setShowDailyGoalModal(false),
-        waterUnit,
+        "ml",
       )}
 
       <CustomAmountModal
         visible={showAddCupModal}
         onClose={() => setShowAddCupModal(false)}
         onAdd={handleCreateCup}
-        unit={waterUnit || "ml"}
+        unit={"ml"}
       />
 
       <ScrollView
@@ -810,9 +736,6 @@ export default function Profile() {
                       setShowReminderSound(!showReminderSound);
                       setShowReminderSchedule(false);
                       setShowGender(false);
-                      setShowWaterUnit(false);
-                      setShowWeightUnit(false);
-                      setShowActivityLevel(false);
                     }}
                     className="flex-row items-center gap-2 w-[147px] justify-between"
                   >
@@ -853,9 +776,6 @@ export default function Profile() {
                       setShowGender(!showGender);
                       setShowReminderSchedule(false);
                       setShowReminderSound(false);
-                      setShowWaterUnit(false);
-                      setShowWeightUnit(false);
-                      setShowActivityLevel(false);
                     }}
                     className="bg-white border border-[#E4E4E7] rounded-lg px-4 py-2 flex-row items-center gap-2 w-[130px] justify-between"
                   >
@@ -891,7 +811,7 @@ export default function Profile() {
                   >
                     {weight ?? ""}
                   </Text>
-                  <Text className="text-[#52525B] text-base">{weightUnit}</Text>
+                  <Text className="text-[#52525B] text-base">kg</Text>
                 </TouchableOpacity>
               </View>
               <View className="flex-row items-center justify-between pt-4">
@@ -909,7 +829,7 @@ export default function Profile() {
                   >
                     {dailyGoal ?? ""}
                   </Text>
-                  <Text className="text-[#52525B] text-base">{waterUnit}</Text>
+                  <Text className="text-[#52525B] text-base">ml</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -950,7 +870,7 @@ export default function Profile() {
                         className="text-[#52525B] text-xs"
                         font="fustat-medium"
                       >
-                        {cup.volume}
+                        {cup.volume} ml
                       </Text>
                     </View>
                     <TouchableOpacity onPress={() => handleDeleteCup(cup)}>
@@ -974,109 +894,7 @@ export default function Profile() {
             </View>
           </View>
 
-          {/* General Settings Section */}
-          <View className="bg-white border border-[#E4E4E7] rounded-2xl p-6 gap-6 mb-4">
-            <Text className="text-[#27272A] text-xl" font="fustat-bold">
-              General Settings
-            </Text>
-            <View>
-              <View className="flex-row items-center justify-between pb-4 border-b border-[#E4E4E7]">
-                <Text className="text-[#52525B] text-base">Unit for Water</Text>
-                <View className="relative z-20">
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowWaterUnit(!showWaterUnit);
-                      setShowReminderSchedule(false);
-                      setShowReminderSound(false);
-                      setShowGender(false);
-                      setShowWeightUnit(false);
-                      setShowActivityLevel(false);
-                    }}
-                    className="bg-white border border-[#E4E4E7] rounded-lg px-4 py-2 flex-row items-center gap-2 w-[140px] justify-between"
-                  >
-                    <Text
-                      className="text-[#3F3F46] text-base"
-                      font="fustat-medium"
-                    >
-                      {waterUnit}
-                    </Text>
-                    <ArrowDownIcon width={18} height={18} />
-                  </TouchableOpacity>
-                  {showWaterUnit &&
-                    renderDropdown(
-                      waterUnitOptions,
-                      waterUnit,
-                      handleWaterUnitSelect,
-                      () => setShowWaterUnit(false),
-                    )}
-                </View>
-              </View>
-              <View className="flex-row items-center justify-between py-4 border-b border-[#E4E4E7]">
-                <Text className="text-[#52525B] text-base">
-                  Unit for Weight
-                </Text>
-                <View className="relative z-10">
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowWeightUnit(!showWeightUnit);
-                      setShowReminderSchedule(false);
-                      setShowReminderSound(false);
-                      setShowGender(false);
-                      setShowWaterUnit(false);
-                      setShowActivityLevel(false);
-                    }}
-                    className="bg-white border border-[#E4E4E7] rounded-lg px-4 py-2 flex-row items-center gap-2 w-[140px] justify-between"
-                  >
-                    <Text
-                      className="text-[#3F3F46] text-base"
-                      font="fustat-medium"
-                    >
-                      {weightUnit}
-                    </Text>
-                    <ArrowDownIcon width={18} height={18} />
-                  </TouchableOpacity>
-                  {showWeightUnit &&
-                    renderDropdown(
-                      weightUnitOptions,
-                      weightUnit,
-                      handleWeightUnitSelect,
-                      () => setShowWeightUnit(false),
-                    )}
-                </View>
-              </View>
-              <View className="flex-row items-center justify-between pt-4">
-                <Text className="text-[#52525B] text-base">Activity Level</Text>
-                <View className="relative">
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowActivityLevel(!showActivityLevel);
-                      setShowReminderSchedule(false);
-                      setShowReminderSound(false);
-                      setShowGender(false);
-                      setShowWaterUnit(false);
-                      setShowWeightUnit(false);
-                    }}
-                    className="bg-white border border-[#E4E4E7] rounded-lg px-4 py-2 flex-row items-center gap-2 w-[140px] justify-between"
-                  >
-                    <Text
-                      className="text-[#3F3F46] text-base"
-                      font="fustat-medium"
-                    >
-                      {activityLevel}
-                    </Text>
-                    <ArrowDownIcon width={18} height={18} />
-                  </TouchableOpacity>
-                  {showActivityLevel &&
-                    renderDropdown(
-                      activityLevelOptions,
-                      activityLevel,
-                      handleActivityLevelSelect,
-                      () => setShowActivityLevel(false),
-                    )}
-                </View>
-              </View>
-            </View>
-          </View>
+          {/* General Settings removed: units and activity level are fixed (ml/kg) */}
 
           {/* Logout Button */}
           <TouchableOpacity

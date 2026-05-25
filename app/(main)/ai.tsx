@@ -22,14 +22,10 @@ const ArrowDownIcon = () => (
 export default function AI() {
   const [dailyGoal, setDailyGoal] = useState("");
   const [weight, setWeight] = useState("64");
-  const [activityLevel, setActivityLevel] = useState("Medium");
-  const [showActivityPicker, setShowActivityPicker] = useState(false);
   const [showSuggestion, setShowSuggestion] = useState(false);
 
-  const activityLevels = ["Low", "Medium", "High", "Very High"];
-
   const handleGenerateGoal = () => {
-    console.log({ dailyGoal, weight, activityLevel });
+    console.log({ dailyGoal, weight });
     setShowSuggestion(true);
   };
 
@@ -91,50 +87,7 @@ export default function AI() {
               </View>
             </View>
 
-            {/* Activity Level */}
-            <View>
-              <Text className="text-[#3F3F46] text-sm mb-1.5">
-                Activity Level
-              </Text>
-              <TouchableOpacity
-                onPress={() =>
-                  !showSuggestion && setShowActivityPicker(!showActivityPicker)
-                }
-                disabled={showSuggestion}
-                className={`${showSuggestion ? "bg-[#F4F4F5]" : "bg-white"} border border-[#E4E4E7] rounded-2xl px-6 py-4 flex-row items-center justify-between`}
-              >
-                <Text
-                  className={`${showSuggestion ? "text-[#71717A]" : "text-[#3F3F46]"} text-base`}
-                  font="fustat-medium"
-                >
-                  {activityLevel}
-                </Text>
-                <ArrowDownIcon />
-              </TouchableOpacity>
-
-              {/* Activity Level Options */}
-              {showActivityPicker && (
-                <View className="mt-2 bg-white border border-[#E4E4E7] rounded-2xl overflow-hidden">
-                  {activityLevels.map((level) => (
-                    <TouchableOpacity
-                      key={level}
-                      onPress={() => {
-                        setActivityLevel(level);
-                        setShowActivityPicker(false);
-                      }}
-                      className="px-6 py-4 border-b border-[#E4E4E7]"
-                    >
-                      <Text
-                        className={`text-base ${level === activityLevel ? "text-[#4893E5]" : "text-[#3F3F46]"}`}
-                        font="fustat-medium"
-                      >
-                        {level}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
+            {/* Activity Level removed — not used. */}
           </View>
 
           {/* Generate Button */}
