@@ -328,14 +328,59 @@ Backend does:
    - If new `total_ml` < daily goal, set `goal_met = false`
 6. Return success.
 
+### 14) GET /api/users/weekly-stats
+
+Frontend sends:
+
+```json
+{ "clerkUserId": "user_123" }
+```
+
+Query params (optional):
+
+- `weekStart` - Start date of week (YYYY-MM-DD, Sunday by default)
+
+Backend does:
+
+1. Find user by `clerk_user_id`.
+2. Determine week start/end (default: current week starting Sunday).
+3. Aggregate daily totals from `water_intake_logs` (or `daily_statistics`) for each day in the week.
+4. Return a full 7-day array with zero totals for missing days.
+
+Success response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "weekStart": "2024-01-21",
+    "weekEnd": "2024-01-27",
+    "week": [
+      { "date": "2024-01-21", "day": "Sun", "total_ml": 2000 },
+      { "date": "2024-01-22", "day": "Mon", "total_ml": 1520 },
+      { "date": "2024-01-23", "day": "Tue", "total_ml": 1060 },
+      { "date": "2024-01-24", "day": "Wed", "total_ml": 1430 },
+      { "date": "2024-01-25", "day": "Thu", "total_ml": 650 },
+      { "date": "2024-01-26", "day": "Fri", "total_ml": 1160 },
+      { "date": "2024-01-27", "day": "Sat", "total_ml": 810 }
+    ],
+    "total_ml": 8630,
+    "average_ml": 1233,
+    "best_day_ml": 2000
+  }
+}
+```
+
 ### Error response
 
 ```json
 {
   "success": false,
   "message": "Error message",
-  "error": "ERROR_CODE"
-}
+
+Backend implementation prompt (History screen):
+
+"Implement GET /api/users/weekly-stats for the History screen. The endpoint should accept `clerkUserId` and optional `weekStart` (YYYY-MM-DD), calculate the current week (Sunday-Saturday by default), and return a 7-day array with `date`, `day`, and `total_ml` for each day (fill missing days with 0). Include `total_ml`, `average_ml`, and `best_day_ml` in the response. All volumes are milliliters (ml). Weight is stored in kilograms (kg). Do not expose or rely on activity level or unit-selection fields."
 ```
 
 <!-- New prompt here -->

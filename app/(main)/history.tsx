@@ -1,28 +1,153 @@
 import { ShareIcon, WaterDropIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
+import { apiClient } from "@/utils/api";
+import { useUser } from "@clerk/expo";
+import { useFocusEffect } from "@react-navigation/native";
 import * as Sharing from "expo-sharing";
-import React, { useRef } from "react";
-import { Alert, ScrollView, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 
+type WeekEntry = {
+  date: string;
+  day: string;
+  value: number;
+};
+
 export default function History() {
+  const { user } = useUser();
   const historyContentRef = useRef<View>(null);
+  const [weekData, setWeekData] = useState<WeekEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Sample data for the week
-  const weekData = [
-    { day: "Sun", value: 2000 },
-    { day: "Mon", value: 1520 },
-    { day: "Tue", value: 1060 },
-    { day: "Wed", value: 1430 },
-    { day: "Thu", value: 650 },
-    { day: "Fri", value: 1160 },
-    { day: "Sat", value: 810 },
-  ];
+  const clerkUserId = user?.id || "";
 
-  const totalWeek = weekData.reduce((sum, item) => sum + item.value, 0);
-  const average = Math.round(totalWeek / weekData.length);
-  const bestDay = Math.max(...weekData.map((item) => item.value));
+  const buildEmptyWeek = useCallback((): WeekEntry[] => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - today.getDay());
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      const dateKey = date.toISOString().slice(0, 10);
+      const dayLabel = date.toLocaleDateString("en-US", { weekday: "short" });
+
+      return { date: dateKey, day: dayLabel, value: 0 };
+    });
+  }, []);
+
+  const normalizeWeekData = useCallback(
+    (input: any): WeekEntry[] => {
+      const emptyWeek = buildEmptyWeek();
+      const items = Array.isArray(input)
+        ? input
+        : Array.isArray(input?.week)
+          ? input.week
+          : Array.isArray(input?.data)
+            ? input.data
+            : [];
+
+      if (!items.length) return emptyWeek;
+
+      const byDate = new Map(emptyWeek.map((item) => [item.date, item]));
+
+      items.forEach((item: any) => {
+        const date = String(item.date || "");
+        const dayLabel = String(
+          item.day ||
+            (date
+              ? new Date(date).toLocaleDateString("en-US", {
+                  weekday: "short",
+                })
+              : ""),
+        );
+        const value = Number(
+          item.total_ml ?? item.value ?? item.amount_ml ?? 0,
+        );
+
+        if (date && byDate.has(date)) {
+          byDate.set(date, {
+            date,
+            day: dayLabel || byDate.get(date)!.day,
+            value,
+          });
+          return;
+        }
+
+        if (dayLabel) {
+          const match = emptyWeek.find((entry) => entry.day === dayLabel);
+          if (match) {
+            byDate.set(match.date, { ...match, value });
+          }
+        }
+      });
+
+      return Array.from(byDate.values());
+    },
+    [buildEmptyWeek],
+  );
+
+  const loadHistoryData = useCallback(async () => {
+    if (!clerkUserId) {
+      setIsLoading(false);
+      setWeekData(buildEmptyWeek());
+      return;
+    }
+
+    try {
+      const res = await apiClient.makeRequest(
+        `/api/users/weekly-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+      );
+
+      if (res.success) {
+        setWeekData(normalizeWeekData(res.data));
+        return;
+      }
+
+      setWeekData(buildEmptyWeek());
+    } catch (error) {
+      console.error("Error loading weekly history:", error);
+      setWeekData(buildEmptyWeek());
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [buildEmptyWeek, clerkUserId, normalizeWeekData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHistoryData();
+    }, [loadHistoryData]),
+  );
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadHistoryData();
+  }, [loadHistoryData]);
+
+  const totalWeek = useMemo(
+    () => weekData.reduce((sum, item) => sum + item.value, 0),
+    [weekData],
+  );
+  const average = useMemo(
+    () => (weekData.length ? Math.round(totalWeek / weekData.length) : 0),
+    [totalWeek, weekData.length],
+  );
+  const bestDay = useMemo(
+    () =>
+      weekData.length ? Math.max(...weekData.map((item) => item.value)) : 0,
+    [weekData],
+  );
 
   // Calculate height based on value (max height is 180px)
   const maxHeight = 180;
@@ -53,6 +178,9 @@ export default function History() {
     <ScrollView
       className="bg-[#FAFAFA]"
       contentContainerStyle={{ paddingBottom: 100 }}
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+      }
     >
       <SafeAreaView className="flex flex-col flex-1 justify-start px-6 pt-6">
         {/* Title */}
@@ -76,21 +204,16 @@ export default function History() {
               >
                 Total this week
               </Text>
-              <View className="flex-row items-center gap-3">
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#0090C8" />
+              ) : (
                 <Text
                   className="text-[#27272A] text-xl text-center"
                   font="fustat-bold"
                 >
-                  {(totalWeek / 1000).toFixed(2)} L
+                  {totalWeek} ml
                 </Text>
-                <View className="h-4 w-0 border-r border-[#E4E4E7]" />
-                <Text
-                  className="text-[#27272A] text-xl text-center"
-                  font="fustat-bold"
-                >
-                  {totalWeek} ML
-                </Text>
-              </View>
+              )}
               {/* Background water drop icons */}
               <View className="absolute left-[-25px] top-0 opacity-20">
                 <WaterDropIcon width={63} height={63} />
@@ -109,9 +232,13 @@ export default function History() {
                 >
                   Average
                 </Text>
-                <Text className="text-[#27272A] text-xl" font="fustat-bold">
-                  {average} ml
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#0090C8" />
+                ) : (
+                  <Text className="text-[#27272A] text-xl" font="fustat-bold">
+                    {average} ml
+                  </Text>
+                )}
               </View>
               <View className="flex-1 bg-white border border-[#E4E4E7] rounded-2xl p-4">
                 <Text
@@ -120,9 +247,13 @@ export default function History() {
                 >
                   Best Day
                 </Text>
-                <Text className="text-[#27272A] text-xl" font="fustat-bold">
-                  {bestDay} ml
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#0090C8" />
+                ) : (
+                  <Text className="text-[#27272A] text-xl" font="fustat-bold">
+                    {bestDay} ml
+                  </Text>
+                )}
               </View>
             </View>
 
