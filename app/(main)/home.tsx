@@ -10,13 +10,12 @@ import Entypo from "@expo/vector-icons/Entypo";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    RefreshControl,
-    ScrollView,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -335,12 +334,10 @@ const Home = () => {
                 contentContainerStyle={{ gap: 16 }}
                 scrollEnabled={false}
                 renderItem={({ item }) => (
-                  <TouchableOpacity
+                  <Quickadd
+                    amount={`${item.volume} ml`}
                     onPress={() => handleAddWaterFromCup(item)}
-                    activeOpacity={0.8}
-                  >
-                    <Quickadd amount={`${item.volume}${item.unit}`} />
-                  </TouchableOpacity>
+                  />
                 )}
                 keyExtractor={(item) => item.id.toString()}
                 ListEmptyComponent={

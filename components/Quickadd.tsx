@@ -1,15 +1,20 @@
 import React from "react";
-import Text from "./Text";
-import {  TouchableOpacity } from "react-native";
+import { TouchableOpacity } from "react-native";
 import { GlassIcon } from "./SVGIcons";
+import Text from "./Text";
 
 interface QuickaddProps {
   amount: string;
+  onPress?: () => void;
 }
 
-const Quickadd = ({ amount }: QuickaddProps) => {
+const Quickadd = ({ amount, onPress }: QuickaddProps) => {
   return (
-    <TouchableOpacity className="flex-1 p-6 flex flex-col bg-white rounded-lg justify-center items-center border border-[#F4F4F5]">
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      className="flex-1 p-6 flex flex-col bg-white rounded-lg justify-center items-center border border-[#F4F4F5]"
+    >
       <GlassIcon
         style={{
           width: 21,
