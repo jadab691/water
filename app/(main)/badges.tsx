@@ -18,6 +18,7 @@ import {
   RefreshControl,
   ScrollView,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -69,6 +70,8 @@ type BadgeApiItem = {
   unlock_date?: string;
   unlocked_at?: string;
   date?: string;
+  // numeric id if backend returns number-based badge id
+  badgeNum?: number;
 };
 
 const badgeCatalog: BadgeDefinition[] = [
@@ -110,6 +113,16 @@ const badgeCatalog: BadgeDefinition[] = [
   },
 ];
 
+// Map numeric badge IDs (1-6) to their specific icons for quick lookup
+const badgeIconMap: Record<number, React.ReactNode> = {
+  1: <ThreeDayStreakIcon />,
+  2: <SevenDayStreakIcon />,
+  3: <FifteenDayStreakIcon />,
+  4: <ThirtyDayStreakIcon />,
+  5: <SixtyDayStreakIcon />,
+  6: <NinetyDayStreakIcon />,
+};
+
 const toNumber = (value: unknown): number => {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
   if (typeof value === "string") {
@@ -120,27 +133,18 @@ const toNumber = (value: unknown): number => {
 };
 
 const getBadgeIcon = (badgeId: string, title: string): React.ReactNode => {
-  const normalizedId = badgeId.toLowerCase();
-  const normalizedTitle = title.toLowerCase();
+  // prefer numeric mapping when the backend provides a numeric id
+  const parsed = Number(badgeId);
+  if (Number.isFinite(parsed) && badgeIconMap[parsed])
+    return badgeIconMap[parsed];
 
-  if (normalizedId.includes("3") || normalizedTitle.includes("3")) {
-    return <ThreeDayStreakIcon />;
-  }
-  if (normalizedId.includes("7") || normalizedTitle.includes("7")) {
-    return <SevenDayStreakIcon />;
-  }
-  if (normalizedId.includes("15") || normalizedTitle.includes("15")) {
-    return <FifteenDayStreakIcon />;
-  }
-  if (normalizedId.includes("30") || normalizedTitle.includes("30")) {
-    return <ThirtyDayStreakIcon />;
-  }
-  if (normalizedId.includes("60") || normalizedTitle.includes("60")) {
-    return <SixtyDayStreakIcon />;
-  }
-  if (normalizedId.includes("90") || normalizedTitle.includes("90")) {
-    return <NinetyDayStreakIcon />;
-  }
+  const normalizedId = String(badgeId || title).toLowerCase();
+  if (normalizedId.includes("3")) return <ThreeDayStreakIcon />;
+  if (normalizedId.includes("7")) return <SevenDayStreakIcon />;
+  if (normalizedId.includes("15")) return <FifteenDayStreakIcon />;
+  if (normalizedId.includes("30")) return <ThirtyDayStreakIcon />;
+  if (normalizedId.includes("60")) return <SixtyDayStreakIcon />;
+  if (normalizedId.includes("90")) return <NinetyDayStreakIcon />;
 
   return <ThreeDayStreakIcon />;
 };
@@ -163,7 +167,7 @@ const BadgeCard = ({
       pathname: "/(main)/badge-detail",
       params: {
         title,
-        status,
+        status: statusText || "",
         badgeId,
         unlockDate: unlockDate || "",
       },
@@ -172,10 +176,14 @@ const BadgeCard = ({
 
   const CardWrapper = completed ? TouchableOpacity : View;
 
+  const wrapperClass = completed
+    ? "flex-1 bg-yellow-50 border border-yellow-300 rounded-xl p-6 items-center gap-4 min-w-[156px]"
+    : "flex-1 bg-white border border-[#E4E4E7] rounded-xl p-6 items-center gap-4 min-w-[156px]";
+
   return (
     <CardWrapper
       {...(completed && { onPress: handlePress })}
-      className="flex-1 bg-white border border-[#E4E4E7] rounded-xl p-6 items-center gap-4 min-w-[156px]"
+      className={wrapperClass}
     >
       <View
         className="w-[50px] h-[51px] items-center justify-center"
@@ -237,6 +245,7 @@ export default function Badges() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const clerkUserId = user?.id || "";
+  const { width } = useWindowDimensions();
 
   const buildDefaultBadges = useCallback((): BadgeState[] => {
     return badgeCatalog.map((badge) => ({
@@ -253,6 +262,10 @@ export default function Badges() {
     return items.map((item: BadgeApiItem) => ({
       badgeId: String(
         item.badgeId || item.badge_id || item.id || item.code || "",
+      ),
+      // keep numeric id when available for direct mapping
+      badgeNum: toNumber(
+        item.badge_id ?? item.badgeId ?? item.id ?? item.code ?? 0,
       ),
       title: String(item.title || item.name || "Achievement"),
       status: item.status ? String(item.status) : "",
@@ -289,22 +302,33 @@ export default function Badges() {
         const target = item.target || 0;
         const progress = item.progress || 0;
         const progressText = target ? `${progress}/${target}` : undefined;
-        const statusText = item.status
+        const rawStatus = item.status
           ? item.status
           : completed
             ? "Completed"
             : "In progress";
+        // avoid duplicating progress (e.g., "0/3") or showing the generic "In progress"
+        const statusText =
+          rawStatus === progressText || rawStatus === "In progress"
+            ? undefined
+            : rawStatus;
+        const badgeNumber = item.badgeNum || toNumber(item.badgeId || "0");
         const badgeId = item.badgeId || title.toLowerCase();
+        const rawUnlock = item.unlockDate || undefined;
+        const unlockDate = rawUnlock
+          ? new Date(rawUnlock).toLocaleDateString()
+          : undefined;
+        const icon = badgeIconMap[badgeNumber] ?? getBadgeIcon(badgeId, title);
 
         return {
           title,
           badgeId,
           target,
-          icon: getBadgeIcon(badgeId, title),
+          icon,
           completed,
           progressText,
           statusText,
-          unlockDate: item.unlockDate || undefined,
+          unlockDate,
         };
       });
     },
@@ -325,6 +349,7 @@ export default function Badges() {
 
       if (res.success) {
         setBadges(buildBadgesFromApi(res.data));
+        console.log("Loaded achievements:", res.data);
         return;
       }
 
@@ -350,12 +375,14 @@ export default function Badges() {
   }, [loadBadges]);
 
   const badgeRows = useMemo(() => {
+    // breakpoints: mobile 2, tablet 3, desktop 6
+    const cols = width >= 1024 ? 6 : width >= 768 ? 3 : 2;
     const rows: BadgeState[][] = [];
-    for (let i = 0; i < badges.length; i += 2) {
-      rows.push(badges.slice(i, i + 2));
+    for (let i = 0; i < badges.length; i += cols) {
+      rows.push(badges.slice(i, i + cols));
     }
-    return rows;
-  }, [badges]);
+    return { rows, cols };
+  }, [badges, width]);
 
   return (
     <ScrollView
@@ -375,12 +402,17 @@ export default function Badges() {
         </View>
 
         <View className="gap-4">
-          {badgeRows.map((row, rowIndex) => (
+          {badgeRows.rows.map((row, rowIndex) => (
             <View key={`badge-row-${rowIndex}`} className="flex-row gap-4">
               {row.map((badge) => (
                 <BadgeCard key={badge.badgeId} {...badge} />
               ))}
-              {row.length === 1 ? <View className="flex-1" /> : null}
+              {row.length < (badgeRows.cols || 2) &&
+                Array.from({ length: (badgeRows.cols || 2) - row.length }).map(
+                  (_, i) => (
+                    <View key={`spacer-${rowIndex}-${i}`} className="flex-1" />
+                  ),
+                )}
             </View>
           ))}
         </View>
