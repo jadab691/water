@@ -179,7 +179,7 @@ Backend does:
 
 Success response:
 
-```json
+````json
 {
   "success": true,
   "data": {
@@ -205,7 +205,60 @@ Success response:
     ]
   }
 }
-```
+
+Notes for profile preview usage:
+
+- The frontend's profile page displays only unlocked/completed achievements as a compact preview. To support this, ensure each achievement object includes a boolean `completed` (or `is_completed`/`unlocked`) and an `unlock_date` (ISO 8601 timestamp) when completed.
+- Example fields the backend should always provide for each achievement:
+  - `badge_id`: string or number (e.g., `1` or `"3-days"`)
+  - `title`: human readable title (e.g., `"3-days Streak"`)
+  - `target`: numeric target (e.g., `3`)
+  - `progress`: numeric current progress (e.g., `2`)
+  - `completed`: boolean
+  - `status`: string (e.g., `"2/3"` or `"Completed"`)
+  - `unlock_date`: ISO 8601 timestamp or `null` when not completed (e.g., `"2026-05-20T14:32:15.000Z"`)
+  - `type`: e.g., `"streak"`
+
+Example success response for profile preview:
+
+```json
+{
+  "success": true,
+  "data": {
+    "achievements": [
+      {
+        "badge_id": 1,
+        "title": "3-days Streak",
+        "target": 3,
+        "progress": 2,
+        "completed": false,
+        "status": "2/3",
+        "unlock_date": null,
+        "type": "streak"
+      },
+      {
+        "badge_id": 4,
+        "title": "30-days Streak",
+        "target": 30,
+        "progress": 30,
+        "completed": true,
+        "status": "Completed",
+        "unlock_date": "2026-05-20T14:32:15.000Z",
+        "type": "streak"
+      }
+    ]
+  }
+}
+````
+
+Backend implementer notes:
+
+- If you store an `unlocked_at` or similar timestamp field in the DB, map it to `unlock_date` in the API response as an ISO timestamp.
+- Keep `completed` strictly boolean to make client filtering reliable.
+- Return all badges (6) in the main achievements endpoint; the frontend will filter to show only completed ones on the profile preview.
+- Avoid returning ambiguous or inconsistent field names; prefer the canonical set above and provide backwards-compatible aliases for a deprecation window.
+
+````
 
 ### 9) GET /api/users/daily-stats
 
@@ -213,7 +266,7 @@ Frontend sends:
 
 ```json
 { "clerkUserId": "user_123" }
-```
+````
 
 Backend does:
 

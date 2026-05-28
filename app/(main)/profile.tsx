@@ -200,12 +200,33 @@ export default function Profile() {
               ? achievementData.data
               : [];
 
+        // Show only unlocked / completed achievements in profile
+        const unlocked = normalizedAchievements.filter((item: any) =>
+          Boolean(
+            item.completed ?? item.is_completed ?? item.unlocked ?? false,
+          ),
+        );
+
         setAchievements(
-          normalizedAchievements.map((item: any) => ({
-            icon: getAchievementIcon(item.title || item.name || ""),
-            title: item.title || item.name || "Achievement",
-            date: item.date || item.createdAt || "",
-          })),
+          unlocked.map((item: any) => {
+            // prefer unlock timestamps from backend
+            const rawUnlock =
+              item.unlock_date ||
+              item.unlocked_at ||
+              item.unlockDate ||
+              item.date ||
+              item.createdAt ||
+              "";
+            const formatted = rawUnlock
+              ? new Date(rawUnlock).toLocaleDateString()
+              : "";
+
+            return {
+              icon: getAchievementIcon(item.title || item.name || ""),
+              title: item.title || item.name || "Achievement",
+              date: formatted,
+            };
+          }),
         );
       }
 
@@ -647,45 +668,59 @@ export default function Profile() {
                 Achievements
               </Text>
               <View className="gap-0">
-                {achievements.map((achievement, index) => (
-                  <View
-                    key={index}
-                    className={`flex-row items-center gap-4 px-4 ${
-                      index < achievements.length - 1
-                        ? "pb-4 border-b border-[#E4E4E7]"
-                        : "pt-4"
-                    } ${index > 0 ? "pt-4" : ""}`}
-                  >
-                    <View className="size-[50px]">{achievement.icon}</View>
-                    <View className="flex-1 gap-0.5">
-                      <Text
-                        className="text-[#52525B] text-xs"
-                        font="fustat-medium"
-                      >
-                        {achievement.date}
-                      </Text>
-                      <Text
-                        className="text-[#27272A] text-base"
-                        font="fustat-bold"
-                      >
-                        {achievement.title}
-                      </Text>
-                    </View>
+                {achievements.length === 0 ? (
+                  <View className="px-4 py-6 items-center">
+                    <Text
+                      className="text-[#71717A] text-base text-center"
+                      font="fustat-medium"
+                    >
+                      No achievements yet. Keep logging your water to unlock
+                      streak badges!
+                    </Text>
                   </View>
-                ))}
+                ) : (
+                  achievements.map((achievement, index) => (
+                    <View
+                      key={index}
+                      className={`flex-row items-center gap-4 px-4 ${
+                        index < achievements.length - 1
+                          ? "pb-4 border-b border-[#E4E4E7]"
+                          : "pt-4"
+                      } ${index > 0 ? "pt-4" : ""}`}
+                    >
+                      <View className="size-[50px]">{achievement.icon}</View>
+                      <View className="flex-1 gap-0.5">
+                        <Text
+                          className="text-[#52525B] text-xs"
+                          font="fustat-medium"
+                        >
+                          {achievement.date}
+                        </Text>
+                        <Text
+                          className="text-[#27272A] text-base"
+                          font="fustat-bold"
+                        >
+                          {achievement.title}
+                        </Text>
+                      </View>
+                    </View>
+                  ))
+                )}
               </View>
             </View>
-            <View className="px-6 pb-6">
-              <TouchableOpacity
-                onPress={handleShareAll}
-                className="bg-[#0090C8] rounded-2xl py-4 flex-row items-center justify-center gap-3"
-              >
-                <ShareIcon color="white" width={24} height={24} />
-                <Text className="text-white text-base" font="fustat-semibold">
-                  Share All
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {achievements.length > 0 && (
+              <View className="px-6 pb-6">
+                <TouchableOpacity
+                  onPress={handleShareAll}
+                  className="bg-[#0090C8] rounded-2xl py-4 flex-row items-center justify-center gap-3"
+                >
+                  <ShareIcon color="white" width={24} height={24} />
+                  <Text className="text-white text-base" font="fustat-semibold">
+                    Share All
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* Reminder Section */}
