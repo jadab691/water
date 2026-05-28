@@ -2,7 +2,14 @@ import { DoubleSparkleIcon, SparkleIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
-import { ScrollView, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
@@ -19,19 +26,72 @@ const ArrowDownIcon = () => (
   </Svg>
 );
 
+type AISuggestion = {
+  waterIntake: string;
+  recommendations: string[];
+  additionalTips: string;
+};
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+
 export default function AI() {
   const [dailyGoal, setDailyGoal] = useState("");
   const [weight, setWeight] = useState("64");
+  const [activityLevel, setActivityLevel] = useState<
+    "low" | "moderate" | "high"
+  >("moderate");
   const [showSuggestion, setShowSuggestion] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [suggestion, setSuggestion] = useState<AISuggestion | null>(null);
+
+  const generateSmartGoal = async () => {
+    if (!weight) {
+      Alert.alert("Error", "Please enter your weight");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/generate-goal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          weight: parseFloat(weight),
+          dailyGoal: dailyGoal ? parseFloat(dailyGoal) : null,
+          activityLevel,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setSuggestion(data.data);
+        setShowSuggestion(true);
+      } else {
+        Alert.alert("Error", data.message || "Failed to generate suggestion");
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error. Please try again.";
+      Alert.alert("Error", errorMessage);
+      console.error("API Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGenerateGoal = () => {
-    console.log({ dailyGoal, weight });
-    setShowSuggestion(true);
+    generateSmartGoal();
   };
 
   const handleGenerateAnother = () => {
     setShowSuggestion(false);
+    setSuggestion(null);
     setDailyGoal("");
+    setWeight("64");
+    setActivityLevel("moderate");
   };
 
   return (
@@ -87,17 +147,49 @@ export default function AI() {
               </View>
             </View>
 
+            {/* Activity Level */}
+            <View>
+              <Text className="text-[#3F3F46] text-sm mb-1.5">
+                Activity Level
+              </Text>
+              <View className="flex-row gap-2">
+                {(["low", "moderate", "high"] as const).map((level) => (
+                  <TouchableOpacity
+                    key={level}
+                    onPress={() => setActivityLevel(level)}
+                    disabled={showSuggestion}
+                    className={`flex-1 py-2 px-3 rounded-xl border ${
+                      activityLevel === level
+                        ? "bg-[#4893E5] border-[#4893E5]"
+                        : "bg-white border-[#E4E4E7]"
+                    }`}
+                  >
+                    <Text
+                      className={`text-center text-xs capitalize ${
+                        activityLevel === level
+                          ? "text-white"
+                          : "text-[#3F3F46]"
+                      }`}
+                      font="fustat-medium"
+                    >
+                      {level}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
             {/* Activity Level removed — not used. */}
           </View>
 
           {/* Generate Button */}
           <TouchableOpacity
             onPress={handleGenerateGoal}
-            disabled={showSuggestion}
+            disabled={showSuggestion || loading}
           >
             <LinearGradient
               colors={
-                showSuggestion
+                showSuggestion || loading
                   ? ["rgba(72, 147, 229, 0.4)", "rgba(241, 99, 156, 0.4)"]
                   : ["#4893E5", "#F1639C"]
               }
@@ -113,16 +205,22 @@ export default function AI() {
                 gap: 8,
               }}
             >
-              <SparkleIcon width={24} height={24} />
-              <Text className="text-white text-base" font="fustat-semibold">
-                Generate Smart Goal
-              </Text>
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <SparkleIcon width={24} height={24} />
+                  <Text className="text-white text-base" font="fustat-semibold">
+                    Generate Smart Goal
+                  </Text>
+                </>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
         {/* AI Suggestion Card */}
-        {showSuggestion && (
+        {showSuggestion && suggestion && (
           <View className="gap-5">
             <View className="bg-white border border-[#4893E5] rounded-2xl p-6">
               <View className="flex-row gap-3">
@@ -135,23 +233,18 @@ export default function AI() {
                   </Text>
                   <View className="gap-3.5">
                     <Text className="text-[#3F3F46] text-sm">
-                      Aim to drink regular throughout the day, adjusting upward
-                      if you sweat more than usual from exercise or heat.
+                      {suggestion.additionalTips}
                     </Text>
                     <View className="gap-2">
-                      <Text className="text-[#3F3F46] text-sm">
-                        1. Drink minimum 2500 ml water everyday.
+                      <Text className="text-[#3F3F46] text-sm font-bold">
+                        Recommended Daily Intake: {suggestion.waterIntake}
                       </Text>
-                      <Text className="text-[#3F3F46] text-sm">
-                        2. At least exercise 30 min everyday.
-                      </Text>
-                      <Text className="text-[#3F3F46] text-sm">
-                        3. Maintain regular workout
-                      </Text>
+                      {suggestion.recommendations.map((rec, idx) => (
+                        <Text key={idx} className="text-[#3F3F46] text-sm">
+                          {idx + 1}. {rec}
+                        </Text>
+                      ))}
                     </View>
-                    <Text className="text-[#3F3F46] text-sm">
-                      Upward if you sweat more than usual from exercise or heat.
-                    </Text>
                   </View>
                 </View>
               </View>
