@@ -58,7 +58,6 @@ export default function Profile() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileName, setProfileName] = useState("");
-  const [profileLevel, setProfileLevel] = useState("");
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderSchedule, setReminderSchedule] = useState("");
   const [reminderSound, setReminderSound] = useState("");
@@ -68,7 +67,9 @@ export default function Profile() {
   // Units fixed: water in ml, weight in kg
   const [showAddCupModal, setShowAddCupModal] = useState(false);
 
-  // Dropdown visibility states
+  // Edit profile modal states
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editName, setEditName] = useState("");
   const [showReminderSchedule, setShowReminderSchedule] = useState(false);
   const [showReminderSound, setShowReminderSound] = useState(false);
   const [showGender, setShowGender] = useState(false);
@@ -120,13 +121,6 @@ export default function Profile() {
           data.name,
         );
         if (loadedName) setProfileName(loadedName);
-
-        const loadedLevel = pickValue(
-          profileData.level,
-          generalData.level,
-          data.level,
-        );
-        if (loadedLevel) setProfileLevel(loadedLevel);
 
         const loadedReminderEnabled = pickValue(
           settingsData.reminderEnabled,
@@ -187,7 +181,7 @@ export default function Profile() {
           setDailyGoalInput(loadedDailyGoal.toString());
         }
 
-        // Units and activity level removed from client state — use fixed units: ml (water), kg (weight)
+        // Units are fixed on client state — use ml for water and kg for weight
       }
 
       if (achievementsRes.success) {
@@ -278,8 +272,6 @@ export default function Profile() {
     saveProfileData({ gender: value });
   };
 
-  // activity level removed
-
   useEffect(() => {
     loadProfileData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -295,7 +287,6 @@ export default function Profile() {
       gender,
       weight,
       dailyGoal,
-      // units are fixed on frontend/backend: water -> ml, weight -> kg
       ...(overrides || {}),
     };
 
@@ -481,7 +472,38 @@ export default function Profile() {
   };
 
   const handleEditProfile = () => {
-    Alert.alert("Edit Profile", "Profile editing coming soon!");
+    setEditName(profileName);
+    setShowEditProfileModal(true);
+  };
+
+  const handleSaveEditProfile = async () => {
+    if (!editName.trim()) {
+      Alert.alert("Error", "Profile name cannot be empty.");
+      return;
+    }
+
+    const clerkUserId = getClerkUserId();
+    if (!clerkUserId) return;
+
+    setIsSavingProfile(true);
+    const payload = {
+      clerkUserId,
+      name: editName,
+    };
+
+    const res = await apiClient.makeRequest("/api/users/profile", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    setIsSavingProfile(false);
+    if (res.success) {
+      setProfileName(editName);
+      setShowEditProfileModal(false);
+      Alert.alert("Success", "Profile updated successfully!");
+    } else {
+      Alert.alert("Error", res.message || "Failed to update profile.");
+    }
   };
 
   const handleShareAll = async () => {
@@ -598,6 +620,69 @@ export default function Profile() {
 
   return (
     <>
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={showEditProfileModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEditProfileModal(false)}
+      >
+        <TouchableOpacity
+          className="flex-1 bg-black/60 justify-center items-center"
+          activeOpacity={1}
+          onPress={() => setShowEditProfileModal(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            className="bg-white rounded-2xl p-6 mx-6 w-[320px]"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text className="text-[#27272A] text-xl mb-6" font="fustat-bold">
+              Edit Profile
+            </Text>
+            <View className="gap-4 mb-6">
+              <View>
+                <Text className="text-[#3F3F46] text-sm mb-1.5">Name</Text>
+                <TextInput
+                  className="bg-[#F4F4F5] rounded-lg px-4 py-3 text-base text-[#27272A]"
+                  style={{ fontFamily: "Fustat-Medium" }}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Enter name"
+                  placeholderTextColor="#A1A1AA"
+                />
+              </View>
+            </View>
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => setShowEditProfileModal(false)}
+                className="flex-1 border border-[#D4D4D8] rounded-xl py-3 items-center"
+              >
+                <Text
+                  className="text-[#52525B] text-base"
+                  font="fustat-semibold"
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveEditProfile}
+                disabled={isSavingProfile}
+                className="flex-1 bg-[#0090C8] rounded-xl py-3 items-center"
+              >
+                {isSavingProfile ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text className="text-white text-base" font="fustat-semibold">
+                    Save
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Weight Input Modal */}
       {renderInputModal(
         showWeightModal,
@@ -646,9 +731,6 @@ export default function Profile() {
               <View className="gap-1">
                 <Text className="text-[#27272A] text-2xl" font="fustat-bold">
                   {profileName || ""}
-                </Text>
-                <Text className="text-[#52525B] text-base">
-                  {profileLevel || ""}
                 </Text>
               </View>
             </View>
