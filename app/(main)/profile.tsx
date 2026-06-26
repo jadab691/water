@@ -284,6 +284,7 @@ export default function Profile() {
     setIsSavingProfile(true);
     const payload = {
       clerkUserId,
+      name: profileName,
       gender,
       weight,
       dailyGoal,
