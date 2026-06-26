@@ -4,6 +4,7 @@ import CustomAmountModal from "@/components/CustomAmountModal";
 import Quickadd from "@/components/Quickadd";
 import { BellIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
+import WaterWaveCircle from "@/components/WaterWaveCircle";
 import { apiClient } from "@/utils/api";
 import { useUser } from "@clerk/expo";
 import Entypo from "@expo/vector-icons/Entypo";
@@ -300,20 +301,20 @@ const Home = () => {
         </View>
 
         <View className="flex flex-col align-middle w-full">
-          <View className="bg-[#EEFAFF] flex justify-center items-center rounded-full size-60 shadow-2xl border-4 border-white overflow-hidden self-center">
-            {isLoading ? (
+          {isLoading ? (
+            <View className="bg-[#EEFAFF] flex justify-center items-center rounded-full size-60 shadow-2xl border-4 border-white overflow-hidden self-center">
               <ActivityIndicator size="large" color="#0090C8" />
-            ) : (
-              <>
-                <Text className="text-center justify-center text-Color-Solid-Color-Default-default-800 text-4xl font-extrabold">
-                  {hydrationPercentage}%
-                </Text>
-                <Text className="self-stretch text-center justify-center text-Color-Solid-Color-Default-default-700 text-lg font-normal uppercase">
-                  HYDRATED
-                </Text>
-              </>
-            )}
-          </View>
+            </View>
+          ) : (
+            <WaterWaveCircle percentage={hydrationPercentage} size={240}>
+              <Text className="text-center justify-center text-Color-Solid-Color-Default-default-800 text-4xl font-extrabold">
+                {hydrationPercentage}%
+              </Text>
+              <Text className="self-stretch text-center justify-center text-Color-Solid-Color-Default-default-700 text-lg font-normal uppercase">
+                HYDRATED
+              </Text>
+            </WaterWaveCircle>
+          )}
           <Text className="text-[#71717A] text-2xl font-normal my-8 self-center">
             <Text className="text-[#3F3F46] text-2xl font-extrabold">
               {dailyStats.total_ml}
