@@ -12,8 +12,9 @@ import Text from "./Text";
 interface CustomAmountModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (amount: string, note: string) => void;
+  onAdd: (amount: string, note?: string) => void;
   unit?: string;
+  showNote?: boolean;
 }
 
 export default function CustomAmountModal({
@@ -21,13 +22,14 @@ export default function CustomAmountModal({
   onClose,
   onAdd,
   unit = "ml",
+  showNote = true,
 }: CustomAmountModalProps) {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
   const handleAdd = () => {
     if (amount) {
-      onAdd(amount, note);
+      onAdd(amount, showNote ? note : undefined);
       setAmount("");
       setNote("");
       onClose();
@@ -88,17 +90,19 @@ export default function CustomAmountModal({
               </View>
 
               {/* Note Input */}
-              <View className="border border-[#E4E4E7] rounded-2xl px-4 py-2 h-[116px] bg-white">
-                <TextInput
-                  className="flex-1 text-[#52525B] text-base "
-                  placeholder="Add note (optional)"
-                  placeholderTextColor="#71717A"
-                  value={note}
-                  onChangeText={setNote}
-                  multiline
-                  textAlignVertical="top"
-                />
-              </View>
+              {showNote && (
+                <View className="border border-[#E4E4E7] rounded-2xl px-4 py-2 h-[116px] bg-white">
+                  <TextInput
+                    className="flex-1 text-[#52525B] text-base "
+                    placeholder="Add note (optional)"
+                    placeholderTextColor="#71717A"
+                    value={note}
+                    onChangeText={setNote}
+                    multiline
+                    textAlignVertical="top"
+                  />
+                </View>
+              )}
 
               {/* Buttons */}
               <View className="gap-3">

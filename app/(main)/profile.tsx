@@ -551,7 +551,7 @@ export default function Profile() {
     setShowAddCupModal(true);
   };
 
-  const handleCreateCup = async (amount: string, note: string) => {
+  const handleCreateCup = async (amount: string) => {
     const clerkUserId = getClerkUserId();
     if (!clerkUserId) {
       Alert.alert("Error", "User not authenticated.");
@@ -569,7 +569,6 @@ export default function Profile() {
       name: `Cup ${cups.length + 1}`,
       volume,
       unit: "ml",
-      note,
     };
 
     const res = await apiClient.makeRequest("/api/users/cups", {
@@ -709,6 +708,7 @@ export default function Profile() {
         onClose={() => setShowAddCupModal(false)}
         onAdd={handleCreateCup}
         unit={"ml"}
+        showNote={false}
       />
 
       <ScrollView

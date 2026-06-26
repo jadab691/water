@@ -231,7 +231,7 @@ const Home = () => {
     }
   };
 
-  const handleAddCustomWater = async (amount: string, note: string) => {
+  const handleAddCustomWater = async (amount: string, note?: string) => {
     const clerkUserId = getClerkUserId();
     if (!clerkUserId) {
       Alert.alert("Error", "User not authenticated.");
@@ -248,7 +248,7 @@ const Home = () => {
       const payload = {
         clerkUserId,
         amount_ml: volume,
-        notes: note,
+        notes: note ?? "",
       };
 
       const res = await apiClient.makeRequest("/api/users/water-logs", {
