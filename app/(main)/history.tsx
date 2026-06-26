@@ -39,7 +39,10 @@ export default function History() {
     return Array.from({ length: 7 }, (_, i) => {
       const date = new Date(start);
       date.setDate(start.getDate() + i);
-      const dateKey = date.toISOString().slice(0, 10);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      const dateKey = `${y}-${m}-${d}`;
       const dayLabel = date.toLocaleDateString("en-US", { weekday: "short" });
 
       return { date: dateKey, day: dayLabel, value: 0 };
