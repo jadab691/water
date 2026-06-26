@@ -1,9 +1,9 @@
-import { profile } from "@/utils/constants";
 import { LinearGradient } from "expo-linear-gradient";
 import { usePathname, useRouter } from "expo-router";
 import React from "react";
-import { Image, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { AwardIcon, CalenderIcon, HomeIcon, SparkleIcon } from "./SVGIcons";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 export default function BottomNavbar() {
   const router = useRouter();
@@ -79,22 +79,24 @@ export default function BottomNavbar() {
           />
         </TouchableOpacity>
 
-        {/* <TouchableOpacity
-          onPress={() => router.push("/profile")}
-          className="items-center"
-        >
-          <Ionicons
-            name="person"
-            size={24}
-            color={pathname === "/profile" ? "#4893E5" : "#A1A1AA"}
-          />
-        </TouchableOpacity> */}
-
         <TouchableOpacity
           onPress={() => router.push("/profile")}
-          className={`items-center size-10 rounded-full overflow-hidden border-2 ${pathname === "/profile" ? "border-[#4893E5]" : "border-[#E4E4E7]"}`}
+          className={`items-center justify-center size-9 rounded-full overflow-hidden border-2 ${
+            pathname === "/profile" ? "border-[#4893E5]" : "border-[#E4E4E7]"
+          }`}
         >
-          <Image source={profile} className="size-full" resizeMode="contain" />
+          <LinearGradient
+            colors={pathname === "/profile" ? ["#00D2FF", "#0090C8"] : ["#F4F4F5", "#E4E4E7"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            className="size-full items-center justify-center"
+          >
+            <FontAwesome
+              name="user"
+              size={18}
+              color={pathname === "/profile" ? "white" : "#71717A"}
+            />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>

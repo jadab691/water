@@ -13,15 +13,15 @@ import {
 } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import { apiClient } from "@/utils/api";
-import { profile } from "@/utils/constants";
 import { useAuth, useUser } from "@clerk/expo";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Modal,
   ScrollView,
   Switch,
@@ -377,16 +377,14 @@ export default function Profile() {
             onSelect(option.value);
             onClose();
           }}
-          className={`px-4 py-3 ${
-            index < options.length - 1 ? "border-b border-[#E4E4E7]" : ""
-          } ${selectedValue === option.value ? "bg-[#F4F4F5]" : ""}`}
+          className={`px-4 py-3 ${index < options.length - 1 ? "border-b border-[#E4E4E7]" : ""
+            } ${selectedValue === option.value ? "bg-[#F4F4F5]" : ""}`}
         >
           <Text
-            className={`text-base ${
-              selectedValue === option.value
-                ? "text-[#0090C8]"
-                : "text-[#27272A]"
-            }`}
+            className={`text-base ${selectedValue === option.value
+              ? "text-[#0090C8]"
+              : "text-[#27272A]"
+              }`}
             font={
               selectedValue === option.value
                 ? "fustat-semibold"
@@ -720,14 +718,21 @@ export default function Profile() {
           {/* Profile Header */}
           <View className="bg-white border border-[#E4E4E7] rounded-2xl flex-row items-center justify-between pl-4 pr-6 py-4 mb-6">
             <View className="flex-row items-center gap-4">
-              <View className="border-2 border-[rgba(113,113,122,0.08)] rounded-xl overflow-hidden size-[60px]">
-                <Image
-                  source={profile}
-                  className="size-[60px]"
-                  resizeMode="cover"
-                  style={{ marginLeft: 0.5, marginTop: -3 }}
-                />
-              </View>
+              <LinearGradient
+                colors={["#00D2FF", "#0090C8"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ borderRadius: 16, padding: 8 }}
+                className="size-16 items-center justify-center border-2 border-white shadow-md"
+              >
+                {profileName ? (
+                  <Text className="text-white text-3xl font-normal" font="fredoka">
+                    {profileName.trim().charAt(0).toUpperCase()}
+                  </Text>
+                ) : (
+                  <FontAwesome name="user" size={30} color="white" />
+                )}
+              </LinearGradient>
               <View className="gap-1">
                 <Text className="text-[#27272A] text-2xl" font="fustat-bold">
                   {profileName || ""}
@@ -764,11 +769,10 @@ export default function Profile() {
                   achievements.map((achievement, index) => (
                     <View
                       key={index}
-                      className={`flex-row items-center gap-4 px-4 ${
-                        index < achievements.length - 1
-                          ? "pb-4 border-b border-[#E4E4E7]"
-                          : "pt-4"
-                      } ${index > 0 ? "pt-4" : ""}`}
+                      className={`flex-row items-center gap-4 px-4 ${index < achievements.length - 1
+                        ? "pb-4 border-b border-[#E4E4E7]"
+                        : "pt-4"
+                        } ${index > 0 ? "pt-4" : ""}`}
                     >
                       <View className="size-[50px]">{achievement.icon}</View>
                       <View className="flex-1 gap-0.5">
@@ -962,11 +966,10 @@ export default function Profile() {
                 {cups.map((cup, index) => (
                   <View
                     key={index}
-                    className={`flex-row items-center gap-5 px-4 ${
-                      index < cups.length - 1
-                        ? "pb-4 border-b border-[#E4E4E7]"
-                        : "pt-4"
-                    } ${index > 0 ? "pt-4" : ""}`}
+                    className={`flex-row items-center gap-5 px-4 ${index < cups.length - 1
+                      ? "pb-4 border-b border-[#E4E4E7]"
+                      : "pt-4"
+                      } ${index > 0 ? "pt-4" : ""}`}
                   >
                     <GlassIcon width={17} height={24} />
                     <View className="flex-1 flex-row items-center gap-2.5">
@@ -1017,9 +1020,8 @@ export default function Profile() {
           <TouchableOpacity
             onPress={handleLogout}
             disabled={isLoggingOut}
-            className={`border rounded-2xl py-4 flex-row items-center justify-center gap-2 ${
-              isLoggingOut ? "border-[#D4D4D8] opacity-50" : "border-[#D4D4D8]"
-            }`}
+            className={`border rounded-2xl py-4 flex-row items-center justify-center gap-2 ${isLoggingOut ? "border-[#D4D4D8] opacity-50" : "border-[#D4D4D8]"
+              }`}
           >
             {isLoggingOut ? (
               <ActivityIndicator size="small" color="#C20E4D" />
