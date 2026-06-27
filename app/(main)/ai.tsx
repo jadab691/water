@@ -1,10 +1,11 @@
 import { DoubleSparkleIcon, SparkleIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
+  LayoutAnimation,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -35,6 +36,7 @@ type AISuggestion = {
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function AI() {
+  const scrollViewRef = useRef<ScrollView>(null);
   const [dailyGoal, setDailyGoal] = useState("");
   const [weight, setWeight] = useState("64");
   const [activityLevel, setActivityLevel] = useState<
@@ -68,8 +70,12 @@ export default function AI() {
 
       const data = await response.json();
       if (data.success) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setSuggestion(data.data);
         setShowSuggestion(true);
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 150);
       } else {
         Alert.alert("Error", data.message || "Failed to generate suggestion");
       }
@@ -87,6 +93,7 @@ export default function AI() {
   };
 
   const handleGenerateAnother = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowSuggestion(false);
     setSuggestion(null);
     setDailyGoal("");
@@ -95,7 +102,7 @@ export default function AI() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+    <ScrollView ref={scrollViewRef} contentContainerStyle={{ paddingBottom: 100 }}>
       <SafeAreaView className="flex flex-col flex-1 justify-start px-6 pt-6">
         <View className="bg-white rounded-2xl border border-[#E4E4E7] p-6">
           {/* Header */}
@@ -221,7 +228,7 @@ export default function AI() {
 
         {/* AI Suggestion Card */}
         {showSuggestion && suggestion && (
-          <View className="gap-5">
+          <View className="gap-5 mt-6">
             <View className="bg-white border border-[#4893E5] rounded-2xl p-6">
               <View className="flex-row gap-3">
                 <View className="w-8 h-8 items-center justify-center">
