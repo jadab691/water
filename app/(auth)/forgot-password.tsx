@@ -90,7 +90,7 @@ const ForgotPassword = () => {
 
     try {
       const { error: createError } = await signIn.create({
-        strategy: "reset_password_email_code",
+        strategy: "reset_password_email_code" as any,
         identifier: formState.email.trim(),
       });
 

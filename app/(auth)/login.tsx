@@ -1,6 +1,5 @@
 import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
-import { AppleIcon, EmailIcon, GoogleIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import { useAuth, useSessionList, useSignIn } from "@clerk/expo";
 import { Link, Redirect, useRouter } from "expo-router";
@@ -565,12 +564,12 @@ const Login = () => {
               />
               {(activeVerificationMethod === "email_code" ||
                 activeVerificationMethod === "phone_code") && (
-                <Btn
-                  label={isLoading ? "Sending..." : "Resend Code"}
-                  styles="border border-[#E4E4E7] bg-white w-full"
-                  action={handleResendCode}
-                />
-              )}
+                  <Btn
+                    label={isLoading ? "Sending..." : "Resend Code"}
+                    styles="border border-[#E4E4E7] bg-white w-full"
+                    action={handleResendCode}
+                  />
+                )}
               {activeVerificationMethod === "email_code" &&
                 hasPhoneSecondFactor && (
                   <Btn
@@ -621,11 +620,7 @@ const Login = () => {
                 isPassword={true}
                 styles="bg-white"
               />
-              <View className="flex flex-row justify-between -mt-1 mb-2">
-                <View className="flex flex-row gap-2 text-center items-center">
-                  <View className="w-5 h-5 border border-[#D4D4D8] rounded-md" />
-                  <Text className="text-[#71717A]"> Remember me</Text>
-                </View>
+              <View className="flex flex-row justify-end -mt-1 mb-2">
                 <Link
                   href="/forgot-password"
                   className="text-base text-[#0090C8]"
@@ -656,40 +651,13 @@ const Login = () => {
           )}
 
           {!isSecondFactorStep && (
-            <>
-              <View className="flex flex-row items-center justify-center gap-4 px-4  overflow-hidden">
-                <View className="border-b border-[#E4E4E7] w-full" />
-                <Text className="text-center">or</Text>
-                <View className="border-b border-[#E4E4E7] w-full" />
-              </View>
-
-              <View className="flex flex-col gap-2 w-full">
-                <Btn
-                  label="Continue with Google"
-                  styles="border border-[#E4E4E7] w-full"
-                  leftIcon={<GoogleIcon style={{ width: 18, height: 18 }} />}
-                />
-                <Btn
-                  label="Continue with Apple"
-                  styles="border border-[#E4E4E7] w-full"
-                  leftIcon={<AppleIcon style={{ width: 18, height: 18 }} />}
-                />
-                <Btn
-                  label="Continue with Email"
-                  styles="border border-[#E4E4E7] w-full"
-                  leftIcon={<EmailIcon style={{ width: 18, height: 18 }} />}
-                  action={() => router.push("/signup-email")}
-                />
-              </View>
-
-              <Link
-                href="/signup"
-                className="text-center text-base text-[#71717a] px-5"
-              >
-                Don't have account?{" "}
-                <Text className="font-bold text-[#0090C8]">Sign Up</Text>
-              </Link>
-            </>
+            <Link
+              href="/signup"
+              className="text-center text-base text-[#71717a] px-5"
+            >
+              Don't have account?{" "}
+              <Text className="font-bold text-[#0090C8]">Sign Up</Text>
+            </Link>
           )}
 
           <View nativeID="clerk-captcha" />
