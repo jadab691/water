@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
+import { useUser } from "@clerk/expo";
 
 const ArrowDownIcon = () => (
   <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
@@ -27,6 +28,28 @@ const ArrowDownIcon = () => (
   </Svg>
 );
 
+const ErrorIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+    <Path
+      d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z"
+      stroke="#EF4444"
+      strokeWidth={1.5}
+    />
+    <Path
+      d="M10 6V11"
+      stroke="#EF4444"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+    />
+    <Path
+      d="M10 14H10.01"
+      stroke="#EF4444"
+      strokeWidth={2}
+      strokeLinecap="round"
+    />
+  </Svg>
+);
+
 type AISuggestion = {
   waterIntake: string;
   recommendations: string[];
@@ -36,6 +59,7 @@ type AISuggestion = {
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function AI() {
+  const { user } = useUser();
   const scrollViewRef = useRef<ScrollView>(null);
   const [dailyGoal, setDailyGoal] = useState("");
   const [weight, setWeight] = useState("64");
@@ -45,27 +69,53 @@ export default function AI() {
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState<AISuggestion | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const generateSmartGoal = async () => {
+    if (!dailyGoal) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setError("Please enter your daily goal");
+      return;
+    }
+
+    const dailyGoalNum = parseFloat(dailyGoal);
+    if (isNaN(dailyGoalNum) || dailyGoalNum <= 0) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setError("Daily goal must be a positive number");
+      return;
+    }
+
     if (!weight) {
-      Alert.alert("Error", "Please enter your weight");
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setError("Please enter your weight");
+      return;
+    }
+
+    const weightNum = parseFloat(weight);
+    if (isNaN(weightNum) || weightNum <= 0) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setError("Weight must be a positive number");
       return;
     }
 
     setLoading(true);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/api/ai/generate-goal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          weight: parseFloat(weight),
-          dailyGoal: dailyGoal ? parseFloat(dailyGoal) : null,
+          clerkUserId: user?.id || "",
+          weight: weightNum,
+          dailyGoal: dailyGoalNum,
           activityLevel,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Server error: ${response.status}`);
       }
 
       const data = await response.json();
@@ -77,12 +127,13 @@ export default function AI() {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 150);
       } else {
-        Alert.alert("Error", data.message || "Failed to generate suggestion");
+        throw new Error(data.message || "Failed to generate suggestion");
       }
-    } catch (error: any) {
-      const errorMessage = error?.message || "Network error. Please try again.";
-      Alert.alert("Error", errorMessage);
-      console.error("API Error:", error);
+    } catch (err: any) {
+      const errorMessage = err?.message || "Network error. Please try again.";
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setError(errorMessage);
+      console.error("API Error:", err);
     } finally {
       setLoading(false);
     }
@@ -96,6 +147,7 @@ export default function AI() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowSuggestion(false);
     setSuggestion(null);
+    setError(null);
     setDailyGoal("");
     setWeight("64");
     setActivityLevel("moderate");
@@ -125,7 +177,13 @@ export default function AI() {
               >
                 <TextInput
                   value={dailyGoal}
-                  onChangeText={setDailyGoal}
+                  onChangeText={(val) => {
+                    setDailyGoal(val);
+                    if (error) {
+                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                      setError(null);
+                    }
+                  }}
                   placeholder="Enter amount"
                   placeholderTextColor="#71717A"
                   keyboardType="numeric"
@@ -145,7 +203,13 @@ export default function AI() {
               >
                 <TextInput
                   value={weight}
-                  onChangeText={setWeight}
+                  onChangeText={(val) => {
+                    setWeight(val);
+                    if (error) {
+                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                      setError(null);
+                    }
+                  }}
                   keyboardType="numeric"
                   editable={!showSuggestion}
                   className="text-[#71717A] text-base"
@@ -163,7 +227,13 @@ export default function AI() {
                 {(["low", "moderate", "high"] as const).map((level) => (
                   <TouchableOpacity
                     key={level}
-                    onPress={() => setActivityLevel(level)}
+                    onPress={() => {
+                      setActivityLevel(level);
+                      if (error) {
+                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                        setError(null);
+                      }
+                    }}
                     disabled={showSuggestion}
                     className={`flex-1 py-2 px-3 rounded-xl border ${
                       activityLevel === level
@@ -188,6 +258,16 @@ export default function AI() {
 
             {/* Activity Level removed — not used. */}
           </View>
+
+          {/* Error Banner */}
+          {error && (
+            <View className="flex-row items-center gap-3 bg-[#FEF2F2] border border-[#FEE2E2] rounded-2xl p-4 mb-4">
+              <ErrorIcon />
+              <Text className="flex-1 text-[#991B1B] text-sm" font="fustat-medium">
+                {error}
+              </Text>
+            </View>
+          )}
 
           {/* Generate Button */}
           <TouchableOpacity
