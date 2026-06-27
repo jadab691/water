@@ -31,6 +31,17 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
+import * as Notifications from "expo-notifications";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 type DropdownOption = {
   label: string;
@@ -59,8 +70,7 @@ export default function Profile() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderSchedule, setReminderSchedule] = useState("");
-  const [reminderSound, setReminderSound] = useState("");
+  const [reminderMinutes, setReminderMinutes] = useState(30);
   const [gender, setGender] = useState("");
   const [weight, setWeight] = useState<number | null>(null);
   const [dailyGoal, setDailyGoal] = useState<number | null>(null);
@@ -70,8 +80,8 @@ export default function Profile() {
   // Edit profile modal states
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editName, setEditName] = useState("");
-  const [showReminderSchedule, setShowReminderSchedule] = useState(false);
-  const [showReminderSound, setShowReminderSound] = useState(false);
+  const [showReminderMinutesModal, setShowReminderMinutesModal] = useState(false);
+  const [reminderMinutesInput, setReminderMinutesInput] = useState("30");
   const [showGender, setShowGender] = useState(false);
   // removed unit/activity dropdown states (units are fixed)
 
@@ -134,14 +144,9 @@ export default function Profile() {
           settingsData.reminder_schedule,
         );
         if (loadedReminderSchedule) {
-          setReminderSchedule(String(loadedReminderSchedule));
-        }
-        const loadedReminderSound = pickValue(
-          settingsData.reminderSound,
-          settingsData.reminder_sound,
-        );
-        if (loadedReminderSound) {
-          setReminderSound(String(loadedReminderSound));
+          const minutes = parseInt(String(loadedReminderSchedule).replace(/[^0-9]/g, "")) || 30;
+          setReminderMinutes(minutes);
+          setReminderMinutesInput(minutes.toString());
         }
 
         const loadedGender = pickValue(
@@ -250,19 +255,68 @@ export default function Profile() {
     }
   };
 
+  const syncNotifications = async (enabled: boolean, minutes: number) => {
+    try {
+      if (!enabled) {
+        await Notifications.cancelAllScheduledNotificationsAsync();
+        return;
+      }
+
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== "granted") {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== "granted") {
+        Alert.alert(
+          "Permission Denied",
+          "Please enable notifications in settings to receive hydration reminders."
+        );
+        setReminderEnabled(false);
+        saveReminderData({ reminderEnabled: false });
+        return;
+      }
+
+      await Notifications.cancelAllScheduledNotificationsAsync();
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Drink Water! 💧",
+          body: "It's time to take a sip and stay hydrated.",
+          sound: true,
+        },
+        trigger: {
+          type: "timeInterval",
+          seconds: minutes * 60,
+          repeats: true,
+        } as any,
+      });
+    } catch (e) {
+      console.error("Failed to sync notifications:", e);
+    }
+  };
+
   const handleReminderToggle = (value: boolean) => {
     setReminderEnabled(value);
     saveReminderData({ reminderEnabled: value });
+    syncNotifications(value, reminderMinutes);
   };
 
-  const handleReminderScheduleSelect = (value: string) => {
-    setReminderSchedule(value);
-    saveReminderData({ reminderSchedule: value });
-  };
-
-  const handleReminderSoundSelect = (value: string) => {
-    setReminderSound(value);
-    saveReminderData({ reminderSound: value });
+  const handleReminderMinutesSave = () => {
+    const value = parseInt(reminderMinutesInput);
+    if (!isNaN(value) && value >= 5 && value <= 240) {
+      setReminderMinutes(value);
+      setShowReminderMinutesModal(false);
+      saveReminderData({ reminderMinutes: value });
+      syncNotifications(reminderEnabled, value);
+    } else {
+      Alert.alert(
+        "Invalid Duration",
+        "Reminder interval must be between 5 minutes and 240 minutes (4 hours)."
+      );
+    }
   };
 
   // unit selection removed (units are fixed)
@@ -306,12 +360,18 @@ export default function Profile() {
     const clerkUserId = getClerkUserId();
     if (!clerkUserId) return;
 
+    const isEnabled = overrides?.hasOwnProperty("reminderEnabled")
+      ? overrides.reminderEnabled
+      : reminderEnabled;
+
+    const minutes = overrides?.hasOwnProperty("reminderMinutes")
+      ? overrides.reminderMinutes
+      : reminderMinutes;
+
     const payload = {
       clerkUserId,
-      reminderEnabled,
-      reminderSchedule: reminderSchedule || "30 min",
-      reminderSound: reminderSound || "Water drop sound",
-      ...(overrides || {}),
+      reminderEnabled: isEnabled,
+      reminderSchedule: `${minutes} min`,
     };
 
     const res = await apiClient.makeRequest("/api/users/reminder-settings", {
@@ -324,19 +384,7 @@ export default function Profile() {
     }
   };
 
-  // Dropdown options
-  const reminderScheduleOptions: DropdownOption[] = [
-    { label: "15 min", value: "15 min" },
-    { label: "30 min", value: "30 min" },
-    { label: "1 hour", value: "1 hour" },
-    { label: "2 hours", value: "2 hours" },
-  ];
-
-  const reminderSoundOptions: DropdownOption[] = [
-    { label: "Water drop sound", value: "Water drop sound" },
-    { label: "Bell sound", value: "Bell sound" },
-    { label: "Chime sound", value: "Chime sound" },
-  ];
+  // Dropdown options removed since reminder sound is deleted and schedule uses input modal
 
   const genderOptions: DropdownOption[] = [
     { label: "Male", value: "Male" },
@@ -464,11 +512,7 @@ export default function Profile() {
     </Modal>
   );
 
-  const handleReminderSchedule = () => {
-    setShowReminderSchedule(!showReminderSchedule);
-    setShowReminderSound(false);
-    setShowGender(false);
-  };
+  // handleReminderSchedule removed
 
   const handleEditProfile = () => {
     setEditName(profileName);
@@ -703,6 +747,16 @@ export default function Profile() {
         "ml",
       )}
 
+      {renderInputModal(
+        showReminderMinutesModal,
+        "Reminder Interval",
+        reminderMinutesInput,
+        setReminderMinutesInput,
+        handleReminderMinutesSave,
+        () => setShowReminderMinutesModal(false),
+        "minutes",
+      )}
+
       <CustomAmountModal
         visible={showAddCupModal}
         onClose={() => setShowAddCupModal(false)}
@@ -824,62 +878,25 @@ export default function Profile() {
               />
             </View>
             <View>
-              <View className="flex-row items-center justify-between pb-4 border-b border-[#E4E4E7]">
+              <View className="flex-row items-center justify-between pt-2">
                 <Text className="text-[#52525B] text-base">
-                  Reminder Schedule
+                  Reminder Interval
                 </Text>
-                <View className="relative z-50">
-                  <TouchableOpacity
-                    onPress={handleReminderSchedule}
-                    className="bg-white border border-[#E4E4E7] rounded-lg px-4 py-2 flex-row items-center gap-2 w-[118px] justify-between"
+                <TouchableOpacity
+                  onPress={() => {
+                    setReminderMinutesInput(reminderMinutes.toString());
+                    setShowReminderMinutesModal(true);
+                  }}
+                  className="bg-white border border-[#E4E4E7] rounded-lg px-4 py-2 flex-row items-center gap-2 w-[130px] justify-between"
+                >
+                  <Text
+                    className="text-[#27272A] text-base"
+                    font="fustat-semibold"
                   >
-                    <Text
-                      className="text-[#3F3F46] text-base"
-                      font="fustat-medium"
-                    >
-                      {reminderSchedule}
-                    </Text>
-                    <ArrowDownIcon width={18} height={18} />
-                  </TouchableOpacity>
-                  {showReminderSchedule &&
-                    renderDropdown(
-                      reminderScheduleOptions,
-                      reminderSchedule,
-                      handleReminderScheduleSelect,
-                      () => setShowReminderSchedule(false),
-                    )}
-                </View>
-              </View>
-              <View className="flex-row items-center justify-between pt-4">
-                <Text className="text-[#52525B] text-base">Reminder Sound</Text>
-                <View className="relative z-40">
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowReminderSound(!showReminderSound);
-                      setShowReminderSchedule(false);
-                      setShowGender(false);
-                    }}
-                    className="flex-row items-center gap-2 w-[147px] justify-between"
-                  >
-                    <Text
-                      className="text-[#3F3F46] text-base flex-1"
-                      font="fustat-medium"
-                      numberOfLines={1}
-                    >
-                      {reminderSound}
-                    </Text>
-                    <View style={{ transform: [{ rotate: "-90deg" }] }}>
-                      <ArrowDownIcon width={18} height={18} />
-                    </View>
-                  </TouchableOpacity>
-                  {showReminderSound &&
-                    renderDropdown(
-                      reminderSoundOptions,
-                      reminderSound,
-                      handleReminderSoundSelect,
-                      () => setShowReminderSound(false),
-                    )}
-                </View>
+                    {reminderMinutes}
+                  </Text>
+                  <Text className="text-[#52525B] text-base">min</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -896,8 +913,6 @@ export default function Profile() {
                   <TouchableOpacity
                     onPress={() => {
                       setShowGender(!showGender);
-                      setShowReminderSchedule(false);
-                      setShowReminderSound(false);
                     }}
                     className="bg-white border border-[#E4E4E7] rounded-lg px-4 py-2 flex-row items-center gap-2 w-[130px] justify-between"
                   >
