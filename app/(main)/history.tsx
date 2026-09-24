@@ -2,7 +2,7 @@ import { ShareIcon, WaterDropIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import { apiClient } from "@/utils/api";
 import { useUser } from "@clerk/expo";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {

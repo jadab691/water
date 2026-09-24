@@ -31,17 +31,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
-import * as Notifications from "expo-notifications";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
 
 type DropdownOption = {
   label: string;
@@ -256,45 +246,13 @@ export default function Profile() {
   };
 
   const syncNotifications = async (enabled: boolean, minutes: number) => {
-    try {
-      if (!enabled) {
-        await Notifications.cancelAllScheduledNotificationsAsync();
-        return;
-      }
-
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      if (existingStatus !== "granted") {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-
-      if (finalStatus !== "granted") {
-        Alert.alert(
-          "Permission Denied",
-          "Please enable notifications in settings to receive hydration reminders."
-        );
-        setReminderEnabled(false);
-        saveReminderData({ reminderEnabled: false });
-        return;
-      }
-
-      await Notifications.cancelAllScheduledNotificationsAsync();
-
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Drink Water! 💧",
-          body: "It's time to take a sip and stay hydrated.",
-          sound: true,
-        },
-        trigger: {
-          type: "timeInterval",
-          seconds: minutes * 60,
-          repeats: true,
-        } as any,
-      });
-    } catch (e) {
-      console.error("Failed to sync notifications:", e);
+    if (enabled) {
+      Alert.alert(
+        "Not Supported",
+        "Push notifications require a development build."
+      );
+      setReminderEnabled(false);
+      saveReminderData({ reminderEnabled: false });
     }
   };
 

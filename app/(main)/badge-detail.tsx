@@ -12,7 +12,7 @@ import Text from "@/components/Text";
 import { logo } from "@/utils/constants";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
-import * as MediaLibrary from "expo-media-library";
+
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useRef } from "react";
@@ -36,32 +36,7 @@ export default function BadgeDetail() {
 
   const { title, status, badgeId, unlockDate } = params;
 
-  const handleSaveImage = async () => {
-    try {
-      // Request permissions
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Please grant permission to save images to your gallery",
-        );
-        return;
-      }
 
-      // Capture the badge card as image
-      const uri = await captureRef(badgeCardRef, {
-        format: "png",
-        quality: 1,
-      });
-
-      // Save to gallery
-      await MediaLibrary.saveToLibraryAsync(uri);
-      Alert.alert("Success", "Badge image saved to gallery!");
-    } catch (error) {
-      console.error("Error saving image:", error);
-      Alert.alert("Error", "Failed to save image");
-    }
-  };
 
   const handleShare = async () => {
     try {
@@ -165,14 +140,7 @@ export default function BadgeDetail() {
 
         {/* Action Buttons */}
         <View className="flex-row gap-4">
-          <TouchableOpacity
-            onPress={handleSaveImage}
-            className="flex-1 bg-white border border-[#D4D4D8] rounded-2xl py-4 items-center"
-          >
-            <Text className="text-[#52525B] text-base" font="fustat-semibold">
-              Save Image
-            </Text>
-          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={handleShare}
             className="flex-1 bg-[#0090C8] rounded-2xl py-4 items-center"

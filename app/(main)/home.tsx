@@ -8,7 +8,7 @@ import WaterWaveCircle from "@/components/WaterWaveCircle";
 import { apiClient } from "@/utils/api";
 import { useUser } from "@clerk/expo";
 import Entypo from "@expo/vector-icons/Entypo";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,

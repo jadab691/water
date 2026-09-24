@@ -10,8 +10,7 @@ import {
 import Text from "@/components/Text";
 import { apiClient } from "@/utils/api";
 import { useUser } from "@clerk/expo";
-import { useFocusEffect } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,

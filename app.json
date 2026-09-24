@@ -50,7 +50,11 @@
       "@react-native-community/datetimepicker",
       "expo-font",
       "@clerk/expo",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-image",
+      "expo-sharing",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,
