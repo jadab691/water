@@ -3,7 +3,7 @@ import FormInput from "@/components/FormInput";
 import Text from "@/components/Text";
 import { apiClient } from "@/utils/api";
 import { useAuth, useSignUp } from "@clerk/expo";
-import { Link, Redirect, useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -130,15 +130,6 @@ const Signup = () => {
         return;
       }
 
-      const finalizeResult = await signUp.finalize();
-      if (finalizeResult.error) {
-        setGeneralError(
-          finalizeResult.error.message || "Failed to finalize signup.",
-        );
-        setIsLoading(false);
-        return;
-      }
-
       const clerkUserId = signUp.createdUserId;
 
       if (!clerkUserId) {
@@ -152,32 +143,34 @@ const Signup = () => {
       const firstName = nameParts[0];
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
 
-      const backendResponse = await apiClient.makeRequest(
-        "/api/users/initialize-profile",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            clerkUserId,
-            email: formState.email.trim(),
-            firstName,
-            lastName,
-          }),
-        },
-      );
+      // Initialize profile on backend first before activating session
+      try {
+        await apiClient.makeRequest(
+          "/api/users/initialize-profile",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              clerkUserId,
+              email: formState.email.trim(),
+              firstName,
+              lastName,
+            }),
+          },
+        );
+      } catch (backendErr) {
+        console.warn("Backend profile init warning during signup:", backendErr);
+      }
 
-      if (!backendResponse.success) {
+      const finalizeResult = await signUp.finalize();
+      if (finalizeResult.error) {
         setGeneralError(
-          backendResponse.message ||
-            "Unable to save profile. Please try again.",
+          finalizeResult.error.message || "Failed to finalize signup.",
         );
         setIsLoading(false);
         return;
       }
 
-      setInfoMessage("Account created! Redirecting to home...");
-      setTimeout(() => {
-        router.replace("/home");
-      }, 1200);
+      router.replace("/home");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
@@ -185,11 +178,6 @@ const Signup = () => {
       setIsLoading(false);
     }
   };
-
-  // Check if already authenticated and redirect
-  if (isSignedIn) {
-    return <Redirect href="/home" />;
-  }
 
   return (
     <SafeAreaView className="flex flex-col flex-1 items-center justify-center bg-[#F4F4F5] p-6 gap-10">

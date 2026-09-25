@@ -2,8 +2,8 @@ import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
 import Text from "@/components/Text";
 import { useAuth, useSessionList, useSignIn } from "@clerk/expo";
-import { Link, Redirect, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { Link, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -167,13 +167,23 @@ const Login = () => {
     }
   };
 
+  const isFinalizingRef = useRef(false);
+
   const finalizeSession = async () => {
+    if (isFinalizingRef.current) return false;
+    isFinalizingRef.current = true;
+
     if (signIn.status !== "complete" || !signIn.createdSessionId) {
-      return await recoverExistingSession();
+      const recovered = await recoverExistingSession();
+      if (!recovered) {
+        isFinalizingRef.current = false;
+      }
+      return recovered;
     }
 
     const { error: finalizeError } = await signIn.finalize();
     if (finalizeError) {
+      isFinalizingRef.current = false;
       setGeneralError(
         getClerkErrorMessage(finalizeError, "Failed to create active session."),
       );
@@ -186,17 +196,12 @@ const Login = () => {
 
   useEffect(() => {
     const recoverSessionIfPossible = async () => {
-      if (!isLoaded || !signIn || isSignedIn) {
+      if (!isLoaded || !signIn || isSignedIn || isFinalizingRef.current) {
         return;
       }
 
-      if (signIn.status === "complete") {
-        await finalizeSession();
-        return;
-      }
-
-      if (isSessionListLoaded && sessions?.length) {
-        await finalizeSession();
+      if (isSessionListLoaded && sessions?.length && !isLoading) {
+        await recoverExistingSession();
       }
     };
 
@@ -206,7 +211,6 @@ const Login = () => {
     isSignedIn,
     isSessionListLoaded,
     sessions?.length,
-    signIn.status,
   ]);
 
   const prepareSecondFactor = async () => {
@@ -520,10 +524,6 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-
-  if (isSignedIn) {
-    return <Redirect href="/home" />;
-  }
 
   const isSecondFactorStep = signIn.status === "needs_second_factor";
   const activeVerificationMethod =

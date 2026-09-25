@@ -18,11 +18,12 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Modal,
+  RefreshControl,
   ScrollView,
   Switch,
   TextInput,
@@ -53,10 +54,12 @@ type Cup = {
 
 export default function Profile() {
   const { signOut } = useAuth();
-  const { user } = useUser();
+  const { isLoaded: isUserLoaded, user } = useUser();
   const achievementsCardRef = useRef<View>(null);
+  const loadedUserIdRef = useRef<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [gender, setGender] = useState("");
@@ -84,14 +87,18 @@ export default function Profile() {
   const pickValue = <T,>(...values: Array<T | null | undefined>) =>
     values.find((value) => value !== null && value !== undefined);
 
-  const loadProfileData = async () => {
+  const loadProfileData = async (isRefresh = false) => {
     const clerkUserId = getClerkUserId();
     if (!clerkUserId) {
-      setIsLoadingProfile(false);
+      if (!isRefresh) setIsLoadingProfile(false);
       return;
     }
 
-    setIsLoadingProfile(true);
+    const isFirstLoadForUser = loadedUserIdRef.current !== clerkUserId;
+    if (!isRefresh && isFirstLoadForUser) {
+      setIsLoadingProfile(true);
+    }
+
     try {
       const [profileRes, achievementsRes, cupsRes] = await Promise.all([
         apiClient.makeRequest(
@@ -105,59 +112,70 @@ export default function Profile() {
         ),
       ]);
 
-      if (profileRes.success && profileRes.data) {
-        const data = profileRes.data as any;
-        const profileData = data.profile || data;
-        const settingsData = data.settings || data;
-        const generalData = data.general || data;
+      let pData = profileRes.data as any;
 
-        const loadedName = pickValue(
-          profileData.name,
-          generalData.name,
-          data.name,
+      // If user profile is not found in backend DB, auto-initialize it
+      if (!profileRes.success || !pData) {
+        const initRes = await apiClient.makeRequest(
+          "/api/users/initialize-profile",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              clerkUserId,
+              email: user?.primaryEmailAddress?.emailAddress || "",
+              firstName: user?.firstName || "User",
+              lastName: user?.lastName || "",
+            }),
+          },
         );
-        if (loadedName) setProfileName(loadedName);
-
-        const loadedGender = pickValue(
-          profileData.gender,
-          generalData.gender,
-          data.gender,
-        );
-        if (loadedGender) setGender(String(loadedGender));
-
-        const parseNumber = (v: any): number | null => {
-          if (typeof v === "number") return v;
-          if (typeof v === "string") {
-            const n = parseFloat(v);
-            return Number.isFinite(n) ? n : null;
-          }
-          return null;
-        };
-
-        const loadedWeight =
-          parseNumber(profileData.weight) ??
-          parseNumber(generalData.weight) ??
-          parseNumber(data.weight);
-        if (loadedWeight !== null) {
-          setWeight(loadedWeight);
-          setWeightInput(loadedWeight.toString());
+        if (initRes.success && initRes.data) {
+          pData = initRes.data;
         }
-
-        const loadedDailyGoal =
-          parseNumber(profileData.dailyGoal) ??
-          parseNumber(profileData.daily_goal_ml) ??
-          parseNumber(generalData.dailyGoal) ??
-          parseNumber(generalData.daily_goal_ml) ??
-          parseNumber(data.dailyGoal) ??
-          parseNumber(data.daily_goal_ml);
-        if (loadedDailyGoal !== null) {
-          setDailyGoal(loadedDailyGoal);
-          setDailyGoalInput(loadedDailyGoal.toString());
-        }
-
-        // Units are fixed on client state — use ml for water and kg for weight
       }
 
+      const profileData = pData?.profile || pData || {};
+      const generalData = pData?.general || pData || {};
+
+      const loadedName =
+        pickValue(
+          profileData.name,
+          generalData.name,
+          pData?.name,
+          user?.fullName,
+          user?.firstName,
+        ) || "";
+
+      const loadedGender = pickValue(
+        profileData.gender,
+        generalData.gender,
+        pData?.gender,
+      );
+
+      const parseNumber = (v: any): number | null => {
+        if (typeof v === "number") return v;
+        if (typeof v === "string") {
+          const n = parseFloat(v);
+          return Number.isFinite(n) ? n : null;
+        }
+        return null;
+      };
+
+      const loadedWeight =
+        parseNumber(profileData.weight) ??
+        parseNumber(generalData.weight) ??
+        parseNumber(pData?.weight);
+
+      const loadedDailyGoal =
+        parseNumber(profileData.dailyGoal) ??
+        parseNumber(profileData.daily_goal_ml) ??
+        parseNumber(generalData.dailyGoal) ??
+        parseNumber(generalData.daily_goal_ml) ??
+        parseNumber(pData?.dailyGoal) ??
+        parseNumber(pData?.daily_goal_ml) ??
+        2000;
+
+      // Parse achievements
+      let newAchievements: Achievement[] = [];
       if (achievementsRes.success) {
         const achievementData = (achievementsRes.data as any) || [];
         const normalizedAchievements = Array.isArray(achievementData)
@@ -168,36 +186,34 @@ export default function Profile() {
               ? achievementData.data
               : [];
 
-        // Show only unlocked / completed achievements in profile
         const unlocked = normalizedAchievements.filter((item: any) =>
           Boolean(
             item.completed ?? item.is_completed ?? item.unlocked ?? false,
           ),
         );
 
-        setAchievements(
-          unlocked.map((item: any) => {
-            // prefer unlock timestamps from backend
-            const rawUnlock =
-              item.unlock_date ||
-              item.unlocked_at ||
-              item.unlockDate ||
-              item.date ||
-              item.createdAt ||
-              "";
-            const formatted = rawUnlock
-              ? new Date(rawUnlock).toLocaleDateString()
-              : "";
+        newAchievements = unlocked.map((item: any) => {
+          const rawUnlock =
+            item.unlock_date ||
+            item.unlocked_at ||
+            item.unlockDate ||
+            item.date ||
+            item.createdAt ||
+            "";
+          const formatted = rawUnlock
+            ? new Date(rawUnlock).toLocaleDateString()
+            : "";
 
-            return {
-              icon: getAchievementIcon(item.title || item.name || ""),
-              title: item.title || item.name || "Achievement",
-              date: formatted,
-            };
-          }),
-        );
+          return {
+            icon: getAchievementIcon(item.title || item.name || ""),
+            title: item.title || item.name || "Achievement",
+            date: formatted,
+          };
+        });
       }
 
+      // Parse cups
+      let newCups: Cup[] = [];
       if (cupsRes.success) {
         const cupData = (cupsRes.data as any) || [];
         const normalizedCups = Array.isArray(cupData)
@@ -208,15 +224,26 @@ export default function Profile() {
               ? cupData.data
               : [];
 
-        setCups(
-          normalizedCups.map((item: any) => ({
-            id: Number(item.id),
-            name: item.name,
-            volume: Number(item.volume ?? item.amount ?? 0),
-            unit: item.unit || "ml",
-          })),
-        );
+        newCups = normalizedCups.map((item: any) => ({
+          id: Number(item.id),
+          name: item.name,
+          volume: Number(item.volume ?? item.amount ?? 0),
+          unit: item.unit || "ml",
+        }));
       }
+
+      // Batch all state updates atomically to eliminate flicker
+      setProfileName(loadedName);
+      if (loadedGender) setGender(String(loadedGender));
+      if (loadedWeight !== null) {
+        setWeight(loadedWeight);
+        setWeightInput(loadedWeight.toString());
+      }
+      setDailyGoal(loadedDailyGoal);
+      setDailyGoalInput(loadedDailyGoal.toString());
+      setAchievements(newAchievements);
+      setCups(newCups);
+      loadedUserIdRef.current = clerkUserId;
     } catch (error) {
       console.error("Error loading profile data:", error);
     } finally {
@@ -224,17 +251,19 @@ export default function Profile() {
     }
   };
 
-  // unit selection removed (units are fixed)
-
   const handleGenderSelect = (value: string) => {
     setGender(value);
     saveProfileData({ gender: value });
   };
 
   useEffect(() => {
-    loadProfileData();
+    if (isUserLoaded && user?.id) {
+      if (loadedUserIdRef.current !== user.id) {
+        loadProfileData();
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [isUserLoaded, user?.id]);
 
   const saveProfileData = async (overrides?: Partial<Record<string, any>>) => {
     const clerkUserId = getClerkUserId();
@@ -550,6 +579,20 @@ export default function Profile() {
     return <ThreeDayStreakIcon width={50} height={51} />;
   };
 
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await loadProfileData(true);
+    setIsRefreshing(false);
+  }, [user?.id]);
+
+  if (isLoadingProfile) {
+    return (
+      <View className="flex-1 bg-[#FAFAFA] justify-center items-center">
+        <ActivityIndicator size="large" color="#0090C8" />
+      </View>
+    );
+  }
+
   return (
     <>
       {/* Edit Profile Modal */}
@@ -648,6 +691,9 @@ export default function Profile() {
       <ScrollView
         className="bg-[#FAFAFA]"
         contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }
       >
         <SafeAreaView className="flex flex-col flex-1 justify-start px-6 pt-6">
           {/* Profile Header */}

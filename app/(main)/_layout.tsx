@@ -3,7 +3,7 @@ import { useAuth } from "@clerk/expo";
 import { Redirect, Stack } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
-export default function RootLayout() {
+export default function MainLayout() {
   const { isSignedIn, isLoaded } = useAuth({
     treatPendingAsSignedOut: false,
   });

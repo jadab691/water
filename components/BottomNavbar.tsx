@@ -15,6 +15,11 @@ export default function BottomNavbar() {
   const svgHeight = (width * 128) / 412;
   const buttonSize = 60;
 
+  const navigateTo = (target: string) => {
+    if (pathname === target) return;
+    router.replace(target as any);
+  };
+
   return (
     <View
       className="absolute bottom-2 left-0 right-0 items-center"
@@ -58,7 +63,7 @@ export default function BottomNavbar() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.push("/home")}
+          onPress={() => navigateTo("/home")}
           className="items-center justify-center p-2"
         >
           <HomeIcon
@@ -68,7 +73,7 @@ export default function BottomNavbar() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.push("/history")}
+          onPress={() => navigateTo("/history")}
           className="items-center justify-center p-2"
         >
           <CalenderIcon
@@ -92,7 +97,7 @@ export default function BottomNavbar() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.push("/badges")}
+          onPress={() => navigateTo("/badges")}
           className="items-center justify-center p-2"
         >
           <AwardIcon
@@ -102,7 +107,7 @@ export default function BottomNavbar() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.push("/profile")}
+          onPress={() => navigateTo("/profile")}
           className={`items-center justify-center size-8 rounded-full border-2 ${
             pathname === "/profile" ? "border-[#4893E5]" : "border-[#A1A1AA]"
           }`}
@@ -117,7 +122,7 @@ export default function BottomNavbar() {
 
       {/* Center Special AI button - mathematically centered horizontally & vertically in the crest */}
       <TouchableOpacity
-        onPress={() => router.push("/ai")}
+        onPress={() => navigateTo("/ai")}
         activeOpacity={0.85}
         style={{
           position: "absolute",

@@ -102,10 +102,29 @@ const Home = () => {
         `/api/users/profile?clerkUserId=${encodeURIComponent(clerkUserId)}`,
       );
 
-      if (profileRes.success && profileRes.data) {
-        const data = profileRes.data as any;
-        const profileData = data.profile || data;
-        const settingsData = data.settings || data;
+      let pData = profileRes.data as any;
+
+      if (!profileRes.success || !pData) {
+        const initRes = await apiClient.makeRequest(
+          "/api/users/initialize-profile",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              clerkUserId,
+              email: user?.primaryEmailAddress?.emailAddress || "",
+              firstName: user?.firstName || "User",
+              lastName: user?.lastName || "",
+            }),
+          },
+        );
+        if (initRes.success && initRes.data) {
+          pData = initRes.data;
+        }
+      }
+
+      if (pData) {
+        const profileData = pData.profile || pData;
+        const settingsData = pData.settings || pData;
 
         // Parse daily goal
         const goal =
@@ -115,8 +134,6 @@ const Home = () => {
         } else {
           setDailyGoal(goal);
         }
-
-        // Units are fixed to ml; ignore unit from profile/settings
       }
 
       // Load cups, daily stats, and water logs in parallel
@@ -195,7 +212,7 @@ const Home = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [getClerkUserId()]);
+  }, [user?.id]);
 
   useFocusEffect(
     useCallback(() => {
