@@ -89,7 +89,7 @@ const Home = () => {
     return Math.min(Math.round((dailyStats.total_ml / dailyGoal) * 100), 100);
   };
 
-  const loadHomeData = useCallback(async () => {
+  const loadHomeData = useCallback(async (forceRefresh = false) => {
     const clerkUserId = getClerkUserId();
     if (!clerkUserId) {
       setIsLoading(false);
@@ -100,6 +100,7 @@ const Home = () => {
       // Load profile to get daily goal and units
       const profileRes = await apiClient.makeRequest(
         `/api/users/profile?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+        { forceRefresh },
       );
 
       let pData = profileRes.data as any;
@@ -140,12 +141,15 @@ const Home = () => {
       const [cupsRes, statsRes, logsRes] = await Promise.all([
         apiClient.makeRequest(
           `/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          { forceRefresh },
         ),
         apiClient.makeRequest(
           `/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          { forceRefresh },
         ),
         apiClient.makeRequest(
           `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          { forceRefresh },
         ),
       ]);
 
@@ -240,8 +244,8 @@ const Home = () => {
       });
 
       if (res.success) {
-        // Reload data to reflect the new log
-        await loadHomeData();
+        // Reload data to reflect the new log with fresh network data
+        await loadHomeData(true);
         return;
       }
 
@@ -279,8 +283,8 @@ const Home = () => {
 
       if (res.success) {
         setModalVisible(false);
-        // Reload data to reflect the new log
-        await loadHomeData();
+        // Reload data to reflect the new log with fresh network data
+        await loadHomeData(true);
         return;
       }
 
@@ -291,9 +295,9 @@ const Home = () => {
     }
   };
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    loadHomeData();
+    await loadHomeData(true);
   }, [loadHomeData]);
 
   const hydrationPercentage = calculateHydrationPercentage();

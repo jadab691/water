@@ -100,7 +100,7 @@ export default function History() {
     [buildEmptyWeek],
   );
 
-  const loadHistoryData = useCallback(async () => {
+  const loadHistoryData = useCallback(async (forceRefresh = false) => {
     if (!clerkUserId) {
       setIsLoading(false);
       setWeekData(buildEmptyWeek());
@@ -110,6 +110,7 @@ export default function History() {
     try {
       const res = await apiClient.makeRequest(
         `/api/users/weekly-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+        { forceRefresh },
       );
 
       if (res.success) {
@@ -129,13 +130,13 @@ export default function History() {
 
   useFocusEffect(
     useCallback(() => {
-      loadHistoryData();
+      loadHistoryData(false);
     }, [loadHistoryData]),
   );
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    loadHistoryData();
+    await loadHistoryData(true);
   }, [loadHistoryData]);
 
   const totalWeek = useMemo(

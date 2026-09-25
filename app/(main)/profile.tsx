@@ -103,12 +103,15 @@ export default function Profile() {
       const [profileRes, achievementsRes, cupsRes] = await Promise.all([
         apiClient.makeRequest(
           `/api/users/profile?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          { forceRefresh: isRefresh },
         ),
         apiClient.makeRequest(
           `/api/users/achievements?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          { forceRefresh: isRefresh },
         ),
         apiClient.makeRequest(
           `/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          { forceRefresh: isRefresh },
         ),
       ]);
 
@@ -557,6 +560,7 @@ export default function Profile() {
         onPress: async () => {
           try {
             setIsLoggingOut(true);
+            apiClient.clearCache();
             await signOut();
             router.replace("/login");
           } catch (error) {

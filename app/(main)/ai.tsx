@@ -56,7 +56,7 @@ type AISuggestion = {
   additionalTips: string;
 };
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+import { apiClient } from "@/utils/api";
 
 export default function AI() {
   const { user } = useUser();
@@ -102,9 +102,8 @@ export default function AI() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/generate-goal`, {
+      const res = await apiClient.makeRequest("/api/ai/generate-goal", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clerkUserId: user?.id || "",
           weight: weightNum,
@@ -113,22 +112,16 @@ export default function AI() {
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Server error: ${response.status}`);
+      if (!res.success) {
+        throw new Error(res.message || "Failed to generate suggestion");
       }
 
-      const data = await response.json();
-      if (data.success) {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setSuggestion(data.data);
-        setShowSuggestion(true);
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 150);
-      } else {
-        throw new Error(data.message || "Failed to generate suggestion");
-      }
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setSuggestion(res.data);
+      setShowSuggestion(true);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
     } catch (err: any) {
       const errorMessage = err?.message || "Network error. Please try again.";
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);

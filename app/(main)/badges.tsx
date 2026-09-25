@@ -334,7 +334,7 @@ export default function Badges() {
     [buildDefaultBadges, normalizeAchievements],
   );
 
-  const loadBadges = useCallback(async () => {
+  const loadBadges = useCallback(async (forceRefresh = false) => {
     if (!clerkUserId) {
       setBadges(buildDefaultBadges());
       setIsLoading(false);
@@ -344,11 +344,11 @@ export default function Badges() {
     try {
       const res = await apiClient.makeRequest(
         `/api/users/achievements?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+        { forceRefresh },
       );
 
       if (res.success) {
         setBadges(buildBadgesFromApi(res.data));
-        console.log("Loaded achievements:", res.data);
         return;
       }
 
@@ -364,13 +364,13 @@ export default function Badges() {
 
   useFocusEffect(
     useCallback(() => {
-      loadBadges();
+      loadBadges(false);
     }, [loadBadges]),
   );
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    loadBadges();
+    await loadBadges(true);
   }, [loadBadges]);
 
   const badgeRows = useMemo(() => {
