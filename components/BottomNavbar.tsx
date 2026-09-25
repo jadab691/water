@@ -1,97 +1,158 @@
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
 import { usePathname, useRouter } from "expo-router";
 import React from "react";
-import { TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, useWindowDimensions, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import { AwardIcon, CalenderIcon, HomeIcon, SparkleIcon } from "./SVGIcons";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 export default function BottomNavbar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { width } = useWindowDimensions();
+
+  // Responsive SVG height maintaining the 412:128 aspect ratio
+  const svgHeight = (width * 128) / 412;
+  const buttonSize = 60;
 
   return (
-    <View className="backdrop-blur-3xl absolute bottom-0 left-0 right-0">
+    <View
+      className="absolute bottom-2 left-0 right-0 items-center"
+      pointerEvents="box-none"
+      style={{
+        height: svgHeight,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        elevation: 8,
+      }}
+    >
+      {/* Exact custom arched pill SVG background shape */}
+      <Svg
+        width={width}
+        height={svgHeight}
+        viewBox="0 0 412 128"
+        preserveAspectRatio="none"
+        style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}
+      >
+        <Path
+          d="M205.005 14C224.854 14 243.615 32 263.465 32H356C378.091 32 396 49.9086 396 72C396 94.0914 378.091 112 356 112H56C33.9086 112 16 94.0914 16 72C16 49.9086 33.9086 32 56 32H146.547C166.396 32 185.156 14.0003 205.005 14Z"
+          fill="#FFFFFF"
+          stroke="#F4F4F5"
+          strokeWidth={1}
+        />
+      </Svg>
+
+      {/* Left items container (Home & Calendar) - centered in the left flat segment */}
       <View
-        className="gap-8 bg-white flex-row justify-around items-center p-6 mt-0 m-4 rounded-full"
         style={{
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.15,
-          shadowRadius: 20,
-          elevation: 10,
+          position: "absolute",
+          left: (width * 20) / 412,
+          width: (width * 126) / 412,
+          top: svgHeight * (32 / 128),
+          height: svgHeight * (80 / 128),
+          flexDirection: "row",
+          justifyContent: "space-around",
+          alignItems: "center",
         }}
       >
         <TouchableOpacity
           onPress={() => router.push("/home")}
-          className="items-center"
+          className="items-center justify-center p-2"
         >
           <HomeIcon
-            style={{
-              width: 32,
-              height: 32,
-            }}
+            style={{ width: 28, height: 28 }}
             color={pathname === "/home" ? "#4893E5" : "#A1A1AA"}
           />
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => router.push("/history")}
-          className="items-center"
+          className="items-center justify-center p-2"
         >
           <CalenderIcon
-            style={{
-              width: 32,
-              height: 32,
-            }}
+            style={{ width: 28, height: 28 }}
             color={pathname === "/history" ? "#4893E5" : "#A1A1AA"}
           />
         </TouchableOpacity>
+      </View>
 
-        <TouchableOpacity onPress={() => router.push("/ai")} className="-mt-4">
-          <LinearGradient
-            colors={["#4893E5", "#F1639C"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              padding: 8,
-              borderRadius: 48,
-            }}
-          >
-            <SparkleIcon
-              style={{
-                width: 35,
-                height: 35,
-              }}
-            />
-          </LinearGradient>
-        </TouchableOpacity>
-
+      {/* Right items container (Badges & Profile) - centered in the right flat segment */}
+      <View
+        style={{
+          position: "absolute",
+          right: (width * 20) / 412,
+          width: (width * 126) / 412,
+          top: svgHeight * (32 / 128),
+          height: svgHeight * (80 / 128),
+          flexDirection: "row",
+          justifyContent: "space-around",
+          alignItems: "center",
+        }}
+      >
         <TouchableOpacity
           onPress={() => router.push("/badges")}
-          className="items-center"
+          className="items-center justify-center p-2"
         >
           <AwardIcon
-            style={{
-              width: 32,
-              height: 32,
-            }}
+            style={{ width: 28, height: 28 }}
             color={pathname === "/badges" ? "#4893E5" : "#A1A1AA"}
           />
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => router.push("/profile")}
-          className={`items-center justify-center size-9 rounded-full border-2 ${
+          className={`items-center justify-center size-8 rounded-full border-2 ${
             pathname === "/profile" ? "border-[#4893E5]" : "border-[#A1A1AA]"
           }`}
         >
           <FontAwesome
             name="user"
-            size={18}
+            size={16}
             color={pathname === "/profile" ? "#4893E5" : "#A1A1AA"}
           />
         </TouchableOpacity>
       </View>
+
+      {/* Center Special AI button - mathematically centered horizontally & vertically in the crest */}
+      <TouchableOpacity
+        onPress={() => router.push("/ai")}
+        activeOpacity={0.85}
+        style={{
+          position: "absolute",
+          left: (width - buttonSize) / 2,
+          top: svgHeight * (60 / 128) - buttonSize / 2,
+          width: buttonSize,
+          height: buttonSize,
+          borderRadius: buttonSize / 2,
+          shadowColor: "#4893E5",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.35,
+          shadowRadius: 10,
+          elevation: 8,
+        }}
+      >
+        <LinearGradient
+          colors={["#4893E5", "#F1639C"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            width: buttonSize,
+            height: buttonSize,
+            borderRadius: buttonSize / 2,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <SparkleIcon
+            style={{
+              width: 30,
+              height: 30,
+            }}
+          />
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
   );
 }
