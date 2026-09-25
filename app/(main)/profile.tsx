@@ -419,6 +419,19 @@ export default function Profile() {
     setIsSavingProfile(false);
     if (res.success) {
       setProfileName(editName);
+      try {
+        const parts = editName.trim().split(/\s+/);
+        const fName = parts[0] || "";
+        const lName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+        if (user?.update) {
+          await user.update({
+            firstName: fName,
+            lastName: lName,
+          });
+        }
+      } catch (err) {
+        console.warn("Could not sync name to Clerk:", err);
+      }
       setShowEditProfileModal(false);
       Alert.alert("Success", "Profile updated successfully!");
     } else {

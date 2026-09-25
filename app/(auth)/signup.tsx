@@ -69,13 +69,16 @@ const Signup = () => {
     }
 
     try {
+      const trimmedName = formState.name.trim();
+      const nameParts = trimmedName.split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
+
       const passwordResult = await signUp.password({
         emailAddress: formState.email.trim(),
         password: formState.password,
-        firstName: formState.name.split(" ")[0],
-        lastName:
-          formState.name.split(" ").slice(1).join(" ") ||
-          formState.name.split(" ")[0],
+        firstName,
+        ...(lastName ? { lastName } : {}),
       });
 
       if (passwordResult.error) {
@@ -144,6 +147,11 @@ const Signup = () => {
         return;
       }
 
+      const trimmedName = formState.name.trim();
+      const nameParts = trimmedName.split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
       const backendResponse = await apiClient.makeRequest(
         "/api/users/initialize-profile",
         {
@@ -151,10 +159,8 @@ const Signup = () => {
           body: JSON.stringify({
             clerkUserId,
             email: formState.email.trim(),
-            firstName: formState.name.split(" ")[0],
-            lastName:
-              formState.name.split(" ").slice(1).join(" ") ||
-              formState.name.split(" ")[0],
+            firstName,
+            lastName,
           }),
         },
       );
