@@ -59,8 +59,6 @@ export default function Profile() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileName, setProfileName] = useState("");
-  const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderMinutes, setReminderMinutes] = useState(30);
   const [gender, setGender] = useState("");
   const [weight, setWeight] = useState<number | null>(null);
   const [dailyGoal, setDailyGoal] = useState<number | null>(null);
@@ -70,8 +68,6 @@ export default function Profile() {
   // Edit profile modal states
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editName, setEditName] = useState("");
-  const [showReminderMinutesModal, setShowReminderMinutesModal] = useState(false);
-  const [reminderMinutesInput, setReminderMinutesInput] = useState("30");
   const [showGender, setShowGender] = useState(false);
   // removed unit/activity dropdown states (units are fixed)
 
@@ -121,23 +117,6 @@ export default function Profile() {
           data.name,
         );
         if (loadedName) setProfileName(loadedName);
-
-        const loadedReminderEnabled = pickValue(
-          settingsData.reminderEnabled,
-          settingsData.reminder_enabled,
-        );
-        if (typeof loadedReminderEnabled === "boolean") {
-          setReminderEnabled(loadedReminderEnabled);
-        }
-        const loadedReminderSchedule = pickValue(
-          settingsData.reminderSchedule,
-          settingsData.reminder_schedule,
-        );
-        if (loadedReminderSchedule) {
-          const minutes = parseInt(String(loadedReminderSchedule).replace(/[^0-9]/g, "")) || 30;
-          setReminderMinutes(minutes);
-          setReminderMinutesInput(minutes.toString());
-        }
 
         const loadedGender = pickValue(
           profileData.gender,
@@ -245,38 +224,6 @@ export default function Profile() {
     }
   };
 
-  const syncNotifications = async (enabled: boolean, minutes: number) => {
-    if (enabled) {
-      Alert.alert(
-        "Not Supported",
-        "Push notifications require a development build."
-      );
-      setReminderEnabled(false);
-      saveReminderData({ reminderEnabled: false });
-    }
-  };
-
-  const handleReminderToggle = (value: boolean) => {
-    setReminderEnabled(value);
-    saveReminderData({ reminderEnabled: value });
-    syncNotifications(value, reminderMinutes);
-  };
-
-  const handleReminderMinutesSave = () => {
-    const value = parseInt(reminderMinutesInput);
-    if (!isNaN(value) && value >= 5 && value <= 240) {
-      setReminderMinutes(value);
-      setShowReminderMinutesModal(false);
-      saveReminderData({ reminderMinutes: value });
-      syncNotifications(reminderEnabled, value);
-    } else {
-      Alert.alert(
-        "Invalid Duration",
-        "Reminder interval must be between 5 minutes and 240 minutes (4 hours)."
-      );
-    }
-  };
-
   // unit selection removed (units are fixed)
 
   const handleGenderSelect = (value: string) => {
@@ -311,34 +258,6 @@ export default function Profile() {
     setIsSavingProfile(false);
     if (!res.success) {
       Alert.alert("Error", res.message || "Failed to save profile.");
-    }
-  };
-
-  const saveReminderData = async (overrides?: Partial<Record<string, any>>) => {
-    const clerkUserId = getClerkUserId();
-    if (!clerkUserId) return;
-
-    const isEnabled = overrides?.hasOwnProperty("reminderEnabled")
-      ? overrides.reminderEnabled
-      : reminderEnabled;
-
-    const minutes = overrides?.hasOwnProperty("reminderMinutes")
-      ? overrides.reminderMinutes
-      : reminderMinutes;
-
-    const payload = {
-      clerkUserId,
-      reminderEnabled: isEnabled,
-      reminderSchedule: `${minutes} min`,
-    };
-
-    const res = await apiClient.makeRequest("/api/users/reminder-settings", {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.success) {
-      Alert.alert("Error", res.message || "Failed to save reminder settings.");
     }
   };
 
@@ -705,16 +624,6 @@ export default function Profile() {
         "ml",
       )}
 
-      {renderInputModal(
-        showReminderMinutesModal,
-        "Reminder Interval",
-        reminderMinutesInput,
-        setReminderMinutesInput,
-        handleReminderMinutesSave,
-        () => setShowReminderMinutesModal(false),
-        "minutes",
-      )}
-
       <CustomAmountModal
         visible={showAddCupModal}
         onClose={() => setShowAddCupModal(false)}
@@ -730,29 +639,57 @@ export default function Profile() {
         <SafeAreaView className="flex flex-col flex-1 justify-start px-6 pt-6">
           {/* Profile Header */}
           <View className="bg-white border border-[#E4E4E7] rounded-2xl flex-row items-center justify-between pl-4 pr-6 py-4 mb-6">
-            <View className="flex-row items-center gap-4">
+            <View className="flex-row items-center gap-4 flex-1">
               <LinearGradient
                 colors={["#00D2FF", "#0090C8"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={{ borderRadius: 16, padding: 8 }}
-                className="size-16 items-center justify-center border-2 border-white shadow-md"
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                {profileName ? (
-                  <Text className="text-white text-3xl font-normal" font="fredoka">
-                    {profileName.trim().charAt(0).toUpperCase()}
-                  </Text>
-                ) : (
-                  <FontAwesome name="user" size={30} color="white" />
-                )}
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {profileName ? (
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        fontSize: 22,
+                        textAlign: "center",
+                        textAlignVertical: "center",
+                        includeFontPadding: false,
+                      }}
+                      font="fredoka"
+                    >
+                      {profileName.trim().charAt(0).toUpperCase()}
+                    </Text>
+                  ) : (
+                    <FontAwesome name="user" size={20} color="white" />
+                  )}
+                </View>
               </LinearGradient>
-              <View className="gap-1">
-                <Text className="text-[#27272A] text-2xl" font="fustat-bold">
+              <View className="gap-1 flex-1">
+                <Text 
+                  className="text-[#27272A] text-2xl" 
+                  font="fustat-bold" 
+                  numberOfLines={1} 
+                  ellipsizeMode="tail"
+                >
                   {profileName || ""}
                 </Text>
               </View>
             </View>
-            <TouchableOpacity onPress={handleEditProfile}>
+            <TouchableOpacity onPress={handleEditProfile} className="ml-4">
               <EditIcon />
             </TouchableOpacity>
           </View>
@@ -820,43 +757,6 @@ export default function Profile() {
                 </TouchableOpacity>
               </View>
             )}
-          </View>
-
-          {/* Reminder Section */}
-          <View className="bg-white border border-[#E4E4E7] rounded-2xl p-6 gap-8 mb-4">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-[#27272A] text-xl" font="fustat-bold">
-                Reminder
-              </Text>
-              <Switch
-                value={reminderEnabled}
-                onValueChange={handleReminderToggle}
-                trackColor={{ false: "#D4D4D8", true: "#0090C8" }}
-                thumbColor="white"
-              />
-            </View>
-            <View>
-              <View className="flex-row items-center justify-between pt-2">
-                <Text className="text-[#52525B] text-base">
-                  Reminder Interval
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setReminderMinutesInput(reminderMinutes.toString());
-                    setShowReminderMinutesModal(true);
-                  }}
-                  className="bg-white border border-[#E4E4E7] rounded-lg px-4 py-2 flex-row items-center gap-2 w-[130px] justify-between"
-                >
-                  <Text
-                    className="text-[#27272A] text-base"
-                    font="fustat-semibold"
-                  >
-                    {reminderMinutes}
-                  </Text>
-                  <Text className="text-[#52525B] text-base">min</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </View>
 
           {/* Personal Information Section */}
