@@ -81,22 +81,15 @@ export default function BottomNavbar() {
 
         <TouchableOpacity
           onPress={() => router.push("/profile")}
-          className={`items-center justify-center size-9 rounded-full overflow-hidden border-2 ${
-            pathname === "/profile" ? "border-[#4893E5]" : "border-[#E4E4E7]"
+          className={`items-center justify-center size-9 rounded-full border-2 ${
+            pathname === "/profile" ? "border-[#4893E5]" : "border-[#A1A1AA]"
           }`}
         >
-          <LinearGradient
-            colors={pathname === "/profile" ? ["#00D2FF", "#0090C8"] : ["#F4F4F5", "#E4E4E7"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            className="size-full items-center justify-center"
-          >
-            <FontAwesome
-              name="user"
-              size={18}
-              color={pathname === "/profile" ? "white" : "#71717A"}
-            />
-          </LinearGradient>
+          <FontAwesome
+            name="user"
+            size={18}
+            color={pathname === "/profile" ? "#4893E5" : "#A1A1AA"}
+          />
         </TouchableOpacity>
       </View>
     </View>
