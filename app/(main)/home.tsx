@@ -2,21 +2,24 @@ import Activity from "@/components/Activity";
 import Btn from "@/components/Btn";
 import CustomAmountModal from "@/components/CustomAmountModal";
 import Quickadd from "@/components/Quickadd";
-import { BellIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import WaterWaveCircle from "@/components/WaterWaveCircle";
 import { apiClient } from "@/utils/api";
 import { useUser } from "@clerk/expo";
 import Entypo from "@expo/vector-icons/Entypo";
-import { useFocusEffect } from "expo-router";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   RefreshControl,
   ScrollView,
-  View
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -42,6 +45,7 @@ type DailyStats = {
 
 const Home = () => {
   const { user } = useUser();
+  const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -277,6 +281,9 @@ const Home = () => {
 
   const hydrationPercentage = calculateHydrationPercentage();
 
+  const displayName = user?.firstName || user?.fullName || "";
+  const userInitial = displayName ? displayName.trim().charAt(0).toUpperCase() : "";
+
   return (
     <ScrollView
       contentContainerStyle={{ paddingBottom: 100 }}
@@ -285,18 +292,81 @@ const Home = () => {
       }
     >
       <SafeAreaView className="flex flex-col flex-1 justify-start bg-[#FAFAFA] p-6">
-        <View className="flex flex-row w-full items-center justify-between mb-12">
-          <View>
-            <Text className="justify-center text-[#27272A]" font="fustat-bold">
+        <View className="flex flex-row w-full items-center justify-between mb-8">
+          <View className="flex-1 pr-4">
+            <Text
+              className="text-[#27272A] text-2xl"
+              font="fustat-bold"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Hi {user?.firstName || "User"}!
             </Text>
-            <Text className="justify-center text-[#3F3F46] text-sm">
+            <Text className="text-[#71717A] text-sm mt-0.5">
               {formatDate()}
             </Text>
           </View>
-          <View className="bg-[#E6F6FA] flex p-4 size-140 items-center justify-center aspect-square rounded-2xl">
-            <BellIcon style={{ width: 24, height: 24 }} />
-          </View>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.push("/profile")}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              shadowColor: "#0090C8",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 4,
+              elevation: 3,
+            }}
+          >
+            <LinearGradient
+              colors={["#00D2FF", "#0090C8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
+            >
+              {user?.hasImage && user?.imageUrl ? (
+                <Image
+                  source={{ uri: user.imageUrl }}
+                  style={{ width: 48, height: 48, borderRadius: 24 }}
+                />
+              ) : (
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {userInitial ? (
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        fontSize: 22,
+                        textAlign: "center",
+                        textAlignVertical: "center",
+                        includeFontPadding: false,
+                      }}
+                      font="fredoka"
+                    >
+                      {userInitial}
+                    </Text>
+                  ) : (
+                    <FontAwesome name="user" size={20} color="white" />
+                  )}
+                </View>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
         <View className="flex flex-col align-middle w-full">
