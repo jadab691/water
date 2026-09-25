@@ -22,10 +22,10 @@ export default function BottomNavbar() {
       style={{
         height: svgHeight,
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-        elevation: 8,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        elevation: 2,
       }}
     >
       {/* Exact custom arched pill SVG background shape */}
@@ -39,7 +39,7 @@ export default function BottomNavbar() {
         <Path
           d="M205.005 14C224.854 14 243.615 32 263.465 32H356C378.091 32 396 49.9086 396 72C396 94.0914 378.091 112 356 112H56C33.9086 112 16 94.0914 16 72C16 49.9086 33.9086 32 56 32H146.547C166.396 32 185.156 14.0003 205.005 14Z"
           fill="#FFFFFF"
-          stroke="#F4F4F5"
+          stroke="#E4E4E7"
           strokeWidth={1}
         />
       </Svg>
