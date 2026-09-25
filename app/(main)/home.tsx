@@ -260,7 +260,6 @@ const Home = () => {
         setModalVisible(false);
         // Reload data to reflect the new log
         await loadHomeData();
-        Alert.alert("Success", "Water intake logged!");
         return;
       }
 
@@ -392,6 +391,7 @@ const Home = () => {
           onClose={() => setModalVisible(false)}
           onAdd={handleAddCustomWater}
           unit={"ml"}
+          showNote={false}
         />
       </SafeAreaView>
     </ScrollView>
