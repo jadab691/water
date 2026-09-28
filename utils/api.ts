@@ -1,7 +1,4 @@
-// API Configuration & Ultra-Optimized Production Client
-
-const rawBaseUrl = process.env.EXPO_PUBLIC_API_URL || "https://smart-hydrate.vercel.app";
-const API_BASE_URL = rawBaseUrl.replace(/\/+$/, "");
+import { API_BASE_URL } from "@/utils/constants";
 
 export type ApiResponse<T = any> = {
   success: boolean;
