@@ -5,10 +5,11 @@ import Text from "./Text";
 
 interface QuickaddProps {
   amount: string;
+  title?: string;
   onPress?: () => void;
 }
 
-const Quickadd = ({ amount, onPress }: QuickaddProps) => {
+const Quickadd = ({ amount, title, onPress }: QuickaddProps) => {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -24,8 +25,12 @@ const Quickadd = ({ amount, onPress }: QuickaddProps) => {
       <Text className="justify-center text-[#3F3F46] text-xl font-extrabold mt-4">
         {amount}
       </Text>
-      <Text className="justify-center text-[#71717A] text-sm font-normal">
-        Quick Add
+      <Text
+        className="justify-center text-[#71717A] text-sm font-normal text-center px-1"
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {title || "Quick Add"}
       </Text>
     </TouchableOpacity>
   );

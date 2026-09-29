@@ -1,4 +1,4 @@
-import CustomAmountModal from "@/components/CustomAmountModal";
+import AddCupModal from "@/components/AddCupModal";
 import {
   AddIcon,
   ArrowDownIcon,
@@ -647,7 +647,7 @@ export default function Profile() {
     setShowAddCupModal(true);
   };
 
-  const handleCreateCup = async (amount: string) => {
+  const handleCreateCup = async (description: string, amount: string) => {
     const clerkUserId = getClerkUserId();
     if (!clerkUserId) {
       Alert.alert("Error", "User not authenticated.");
@@ -660,9 +660,11 @@ export default function Profile() {
       return;
     }
 
+    const cupName = description.trim() || `Cup ${cups.length + 1}`;
+
     const newCupPayload = {
       clerkUserId,
-      name: `Cup ${cups.length + 1}`,
+      name: cupName,
       volume,
       unit: "ml",
     };
@@ -673,7 +675,13 @@ export default function Profile() {
     });
 
     if (res.success && res.data) {
-      setCups((prev) => [...prev, res.data as Cup]);
+      const createdCup = res.data as Cup;
+      const updatedCups = [...cups, createdCup];
+      setCups(updatedCups);
+      apiClient.setCachedData(
+        `/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+        updatedCups,
+      );
       setShowAddCupModal(false);
       return;
     }
@@ -804,12 +812,12 @@ export default function Profile() {
         "ml",
       )}
 
-      <CustomAmountModal
+      <AddCupModal
         visible={showAddCupModal}
         onClose={() => setShowAddCupModal(false)}
         onAdd={handleCreateCup}
         unit={"ml"}
-        showNote={false}
+        defaultCupNumber={cups.length + 1}
       />
 
       <ScrollView

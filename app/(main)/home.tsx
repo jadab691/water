@@ -492,6 +492,7 @@ const Home = () => {
                 renderItem={({ item }) => (
                   <Quickadd
                     amount={`${item.volume} ml`}
+                    title={item.name}
                     onPress={() => handleAddWaterFromCup(item)}
                   />
                 )}
