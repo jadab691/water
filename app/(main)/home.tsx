@@ -359,6 +359,92 @@ const Home = () => {
     logWaterOptimistically(volume, note ?? "");
   };
 
+  const handleDeleteLog = (log: WaterLog) => {
+    Alert.alert(
+      "Delete Activity",
+      `Are you sure you want to delete this ${log.amount_ml} ml log?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteWaterLogOptimistically(log),
+        },
+      ],
+    );
+  };
+
+  const deleteWaterLogOptimistically = async (log: WaterLog) => {
+    const clerkUserId = getClerkUserId();
+    if (!clerkUserId) {
+      Alert.alert("Error", "User not authenticated.");
+      return;
+    }
+
+    // 1. Snapshot previous state for rollback
+    const prevStats = dailyStats;
+    const prevLogs = waterLogs;
+
+    // 2. Trigger instant haptic feedback
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
+
+    // 3. Immediately update UI state (0ms latency!)
+    const newTotal = Math.max(0, prevStats.total_ml - log.amount_ml);
+    const newStats: DailyStats = {
+      total_ml: newTotal,
+      goal_met: newTotal >= dailyGoal,
+      log_count: Math.max(0, prevStats.log_count - 1),
+    };
+    const newLogs = prevLogs.filter((l) => l.id !== log.id);
+
+    setDailyStats(newStats);
+    setWaterLogs(newLogs);
+
+    // Keep cache synchronized across tabs
+    apiClient.setCachedData(
+      `/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+      newStats,
+    );
+    apiClient.setCachedData(
+      `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+      newLogs,
+    );
+
+    // 4. Send network request in the background
+    try {
+      const res = await apiClient.makeRequest(`/api/users/water-logs/${log.id}`, {
+        method: "DELETE",
+        body: JSON.stringify({ clerkUserId }),
+      });
+
+      if (!res.success) {
+        // Rollback on failure
+        setDailyStats(prevStats);
+        setWaterLogs(prevLogs);
+        apiClient.setCachedData(
+          `/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          prevStats,
+        );
+        apiClient.setCachedData(
+          `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          prevLogs,
+        );
+        Alert.alert("Error", res.message || "Failed to delete water log.");
+      }
+    } catch (error) {
+      console.error("Error deleting water log:", error);
+      // Rollback on error
+      setDailyStats(prevStats);
+      setWaterLogs(prevLogs);
+      Alert.alert(
+        "Error",
+        "Failed to delete water log. Please check your connection.",
+      );
+    }
+  };
+
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await loadHomeData(true);
@@ -533,6 +619,7 @@ const Home = () => {
                   key={log.id}
                   amount={`${log.amount_ml} ml`}
                   time={formatTime(log.logged_at)}
+                  onDelete={() => handleDeleteLog(log)}
                 />
               ))}
             </View>
