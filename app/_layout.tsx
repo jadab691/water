@@ -17,6 +17,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { CLERK_PUBLISHABLE_KEY } from "@/utils/constants";
+import { AuthProvider } from "@/utils/auth";
 import "./global.css";
 
 SplashScreen.preventAutoHideAsync();
@@ -68,7 +69,9 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <RootLayoutContent />
+      <AuthProvider>
+        <RootLayoutContent />
+      </AuthProvider>
     </ClerkProvider>
   );
 }

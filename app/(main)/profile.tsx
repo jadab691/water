@@ -13,7 +13,7 @@ import {
 } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import { apiClient } from "@/utils/api";
-import { useAuth, useUser } from "@clerk/expo";
+import { useAppAuth } from "@/utils/auth";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -53,8 +53,7 @@ type Cup = {
 };
 
 export default function Profile() {
-  const { signOut } = useAuth();
-  const { isLoaded: isUserLoaded, user } = useUser();
+  const { signOut, isLoaded: isUserLoaded, user } = useAppAuth();
   const achievementsCardRef = useRef<View>(null);
   const loadedUserIdRef = useRef<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);

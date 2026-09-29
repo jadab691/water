@@ -5,7 +5,7 @@ import Quickadd from "@/components/Quickadd";
 import Text from "@/components/Text";
 import WaterWaveCircle from "@/components/WaterWaveCircle";
 import { apiClient } from "@/utils/api";
-import { useUser } from "@clerk/expo";
+import { useAppAuth } from "@/utils/auth";
 import Entypo from "@expo/vector-icons/Entypo";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
@@ -44,7 +44,7 @@ type DailyStats = {
 };
 
 const Home = () => {
-  const { user } = useUser();
+  const { user } = useAppAuth();
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

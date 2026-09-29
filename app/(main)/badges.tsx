@@ -9,7 +9,7 @@ import {
 } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import { apiClient } from "@/utils/api";
-import { useUser } from "@clerk/expo";
+import { useAppAuth } from "@/utils/auth";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -232,7 +232,7 @@ const BadgeCard = ({
 };
 
 export default function Badges() {
-  const { user } = useUser();
+  const { user } = useAppAuth();
   const [badges, setBadges] = useState<BadgeState[]>(() =>
     badgeCatalog.map((badge) => ({
       ...badge,

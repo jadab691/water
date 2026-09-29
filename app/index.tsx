@@ -1,6 +1,6 @@
 import Text from "@/components/Text";
 import { logo } from "@/utils/constants";
-import { useAuth } from "@clerk/expo";
+import { useAppAuth } from "@/utils/auth";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
@@ -11,9 +11,7 @@ import { QuaDizIcon } from "../components/SVGIcons";
 const INTRO_SEEN_KEY = "has_seen_intro_screen";
 
 export default function Index() {
-  const { isLoaded, isSignedIn } = useAuth({
-    treatPendingAsSignedOut: false,
-  });
+  const { isLoaded, isSignedIn } = useAppAuth();
   const [isCheckingFirstLaunch, setIsCheckingFirstLaunch] = useState(true);
 
   useEffect(() => {

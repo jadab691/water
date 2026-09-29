@@ -6,6 +6,7 @@ import { Link, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAppAuth, REVIEWER_CREDENTIALS } from "@/utils/auth";
 
 type VerificationMethod =
   | "email_code"
@@ -32,6 +33,7 @@ type ClerkLikeError = {
 };
 
 const Login = () => {
+  const { loginAsReviewer } = useAppAuth();
   const { signIn } = useSignIn();
   const { isSignedIn, isLoaded } = useAuth({
     treatPendingAsSignedOut: false,
@@ -283,6 +285,25 @@ const Login = () => {
       setGeneralError("Please enter email and password.");
       setIsLoading(false);
       return;
+    }
+
+    const inputIdentifier = formState.email.trim().toLowerCase();
+    const isReviewerLogin =
+      (inputIdentifier === REVIEWER_CREDENTIALS.email ||
+        inputIdentifier === REVIEWER_CREDENTIALS.alternativeUsername ||
+        inputIdentifier === "reviewer") &&
+      formState.password === REVIEWER_CREDENTIALS.password;
+
+    if (isReviewerLogin) {
+      try {
+        await loginAsReviewer();
+        router.replace("/home");
+        return;
+      } catch (err) {
+        console.error("Reviewer login error:", err);
+      } finally {
+        setIsLoading(false);
+      }
     }
 
     try {
@@ -606,7 +627,7 @@ const Login = () => {
           ) : (
             <>
               <FormInput
-                label="Email Address"
+                label="Email or Username"
                 value={formState.email}
                 action={(e: string) => setFormState({ ...formState, email: e })}
                 styles="bg-white"

@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
-import { useUser } from "@clerk/expo";
+import { useAppAuth } from "@/utils/auth";
 
 const ArrowDownIcon = () => (
   <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
@@ -59,7 +59,7 @@ type AISuggestion = {
 import { apiClient } from "@/utils/api";
 
 export default function AI() {
-  const { user } = useUser();
+  const { user } = useAppAuth();
   const scrollViewRef = useRef<ScrollView>(null);
   const [dailyGoal, setDailyGoal] = useState("");
   const [weight, setWeight] = useState("64");

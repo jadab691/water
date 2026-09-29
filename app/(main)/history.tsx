@@ -1,7 +1,7 @@
 import { ShareIcon, WaterDropIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
 import { apiClient } from "@/utils/api";
-import { useUser } from "@clerk/expo";
+import { useAppAuth } from "@/utils/auth";
 import { useFocusEffect } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useCallback, useMemo, useRef, useState } from "react";
@@ -23,7 +23,7 @@ type WeekEntry = {
 };
 
 export default function History() {
-  const { user } = useUser();
+  const { user } = useAppAuth();
   const historyContentRef = useRef<View>(null);
   const [weekData, setWeekData] = useState<WeekEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);

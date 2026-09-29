@@ -1,11 +1,9 @@
-import { useAuth } from "@clerk/expo";
+import { useAppAuth } from "@/utils/auth";
 import { Redirect, Stack } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
 export default function AuthRoutesLayout() {
-  const { isSignedIn, isLoaded } = useAuth({
-    treatPendingAsSignedOut: false,
-  });
+  const { isSignedIn, isLoaded } = useAppAuth();
 
   if (!isLoaded) {
     return (
