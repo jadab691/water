@@ -1,5 +1,6 @@
 import Activity from "@/components/Activity";
 import Btn from "@/components/Btn";
+import Confetti from "@/components/Confetti";
 import CustomAmountModal from "@/components/CustomAmountModal";
 import Quickadd from "@/components/Quickadd";
 import Text from "@/components/Text";
@@ -11,7 +12,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -120,6 +121,8 @@ const Home = () => {
   const hasCachedData = Boolean(cachedCups || cachedStats || cachedLogs || cachedProfile);
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const prevPercentageRef = useRef<number | null>(null);
   const [isLoading, setIsLoading] = useState(!hasCachedData);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cups, setCups] = useState<Cup[]>(() => (cachedCups ? normalizeCups(cachedCups) : []));
@@ -275,9 +278,15 @@ const Home = () => {
       notes: note,
     };
 
+    const wasAlreadyMet = prevStats.total_ml >= dailyGoal;
+    const isNowMet = (prevStats.total_ml + amount) >= dailyGoal;
+    if (!wasAlreadyMet && isNowMet) {
+      setShowConfetti(true);
+    }
+
     const newStats: DailyStats = {
       total_ml: prevStats.total_ml + amount,
-      goal_met: (prevStats.total_ml + amount) >= dailyGoal,
+      goal_met: isNowMet,
       log_count: prevStats.log_count + 1,
     };
     const newLogs = [optimisticLog, ...prevLogs];
@@ -452,17 +461,28 @@ const Home = () => {
 
   const hydrationPercentage = calculateHydrationPercentage();
 
+  // Celebrate completing 100% goal
+  useEffect(() => {
+    if (hydrationPercentage >= 100) {
+      if (prevPercentageRef.current !== null && prevPercentageRef.current < 100) {
+        setShowConfetti(true);
+      }
+    }
+    prevPercentageRef.current = hydrationPercentage;
+  }, [hydrationPercentage]);
+
   const displayName = user?.firstName || user?.fullName || "";
   const userInitial = displayName ? displayName.trim().charAt(0).toUpperCase() : "";
 
   return (
-    <ScrollView
-      className="flex-1 bg-[#FAFAFA]"
-      contentContainerStyle={{ paddingBottom: 100 }}
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-      }
-    >
+    <View className="flex-1 bg-[#FAFAFA]">
+      <ScrollView
+        className="flex-1 bg-[#FAFAFA]"
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }
+      >
       <View className="flex flex-col flex-1 justify-start px-6 pt-2 pb-6">
         <View className="flex flex-row w-full items-center justify-between mb-8">
           <View className="flex-1 pr-4">
@@ -639,6 +659,12 @@ const Home = () => {
         />
       </View>
     </ScrollView>
+
+    <Confetti
+      trigger={showConfetti}
+      onComplete={() => setShowConfetti(false)}
+    />
+  </View>
   );
 };
 
