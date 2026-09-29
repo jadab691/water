@@ -69,7 +69,9 @@ class ApiClient {
   }
 
   /**
-   * Automatically invalidate cached data when a mutating HTTP request succeeds
+   * Automatically invalidate cached data when a mutating HTTP request succeeds.
+   * Uses soft invalidation (marking as expired rather than wiping data) so the UI
+   * can render instantaneously (SWR) with the last known data instead of showing a blank spinner.
    */
   private handleMutationInvalidation(endpoint: string) {
     const clean = endpoint.toLowerCase();
@@ -90,12 +92,40 @@ class ApiClient {
     }
 
     if (invalidatedPatterns.length > 0) {
-      this.invalidate(invalidatedPatterns);
+      this.softInvalidate(invalidatedPatterns);
     }
   }
 
   /**
-   * Invalidate cache entries matching any of the given patterns
+   * Soft-invalidate cache entries: marks them expired (timestamp = 0) so the next request
+   * revalidates from server in the background, but existing data remains available
+   * for instant synchronous UI display without blocking spinners.
+   */
+  softInvalidate(patterns: string | string[]) {
+    const patternList = Array.isArray(patterns) ? patterns : [patterns];
+
+    for (const [key, entry] of this.cache.entries()) {
+      const lowerKey = key.toLowerCase();
+      for (const pattern of patternList) {
+        if (lowerKey.includes(pattern.toLowerCase())) {
+          entry.timestamp = 0; // expired
+          break;
+        }
+      }
+    }
+
+    // Notify any active listeners of the invalidation
+    for (const listener of this.listeners) {
+      try {
+        listener({ type: "invalidate", patterns: patternList });
+      } catch (err) {
+        console.error("Error in cache listener:", err);
+      }
+    }
+  }
+
+  /**
+   * Invalidate cache entries matching any of the given patterns (removes entries)
    */
   invalidate(patterns: string | string[]) {
     const patternList = Array.isArray(patterns) ? patterns : [patterns];
@@ -122,6 +152,85 @@ class ApiClient {
       } catch (err) {
         console.error("Error in cache listener:", err);
       }
+    }
+  }
+
+  /**
+   * Synchronously peek at cached data for an endpoint without triggering a network request.
+   * Used on initial component mount to render data immediately in 0ms (no loading screens).
+   */
+  getCachedData<T = any>(endpoint: string): T | null {
+    const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    const exactKey = `GET:${cleanEndpoint}`;
+
+    const exactMatch = this.cache.get(exactKey);
+    if (exactMatch?.data?.data !== undefined) {
+      return exactMatch.data.data as T;
+    }
+    if (exactMatch?.data !== undefined && exactMatch.data.success) {
+      return exactMatch.data as unknown as T;
+    }
+
+    // If no exact match (e.g. slight query param difference), search for matching endpoint pattern
+    const lowerEndpoint = cleanEndpoint.toLowerCase().split("?")[0];
+    for (const [key, entry] of this.cache.entries()) {
+      if (key.startsWith("GET:") && key.toLowerCase().includes(lowerEndpoint)) {
+        if (entry.data?.data !== undefined) {
+          return entry.data.data as T;
+        }
+        if (entry.data !== undefined && entry.data.success) {
+          return entry.data as unknown as T;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if cache exists and is currently within its freshness TTL
+   */
+  isCacheFresh(endpoint: string): boolean {
+    const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    const exactKey = `GET:${cleanEndpoint}`;
+    const entry = this.cache.get(exactKey);
+    if (!entry) return false;
+    return Date.now() - entry.timestamp < entry.ttl;
+  }
+
+  /**
+   * Manually insert or update cached data for an endpoint.
+   * Useful for optimistic updates (e.g. immediately updating stats after water logging).
+   */
+  setCachedData<T = any>(endpoint: string, data: T, ttlMs?: number) {
+    const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    const key = `GET:${cleanEndpoint}`;
+    const ttl = this.getTtlForEndpoint(cleanEndpoint, ttlMs);
+    this.cache.set(key, {
+      data: { success: true, data },
+      timestamp: Date.now(),
+      ttl,
+    });
+  }
+
+  /**
+   * Pre-warm all primary user data concurrently in the background on app startup.
+   * Eliminates the 2-3 second loading screens when user first navigates between tabs.
+   */
+  async prewarmUserData(clerkUserId: string): Promise<void> {
+    if (!clerkUserId) return;
+    const encodedId = encodeURIComponent(clerkUserId);
+    try {
+      await Promise.allSettled([
+        this.makeRequest(`/api/users/profile?clerkUserId=${encodedId}`),
+        this.makeRequest(`/api/users/cups?clerkUserId=${encodedId}`),
+        this.makeRequest(`/api/users/daily-stats?clerkUserId=${encodedId}`),
+        this.makeRequest(`/api/users/water-logs?clerkUserId=${encodedId}`),
+        this.makeRequest(`/api/users/weekly-stats?clerkUserId=${encodedId}`),
+        this.makeRequest(`/api/users/achievements?clerkUserId=${encodedId}`),
+      ]);
+    } catch (e) {
+      console.warn("Background prewarm completed with non-fatal error:", e);
     }
   }
 

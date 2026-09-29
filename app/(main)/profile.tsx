@@ -30,7 +30,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 
 
@@ -52,18 +51,141 @@ type Cup = {
   unit: string;
 };
 
+const getAchievementIcon = (title: string) => {
+  if (title.includes("15")) {
+    return <FifteenDayStreakIcon width={50} height={51} />;
+  }
+  if (title.includes("7")) {
+    return <SevenDayStreakIcon width={50} height={51} />;
+  }
+  return <ThreeDayStreakIcon width={50} height={51} />;
+};
+
+const pickValue = <T,>(...values: Array<T | null | undefined>) =>
+  values.find((value) => value !== null && value !== undefined);
+
+const parseProfileDetails = (pData: any, user: any) => {
+  if (!pData) return null;
+  const profileData = pData?.profile || pData || {};
+  const generalData = pData?.general || pData || {};
+
+  const name =
+    pickValue(
+      profileData.name,
+      generalData.name,
+      pData?.name,
+      user?.fullName,
+      user?.firstName,
+    ) || "";
+
+  const gender = pickValue(
+    profileData.gender,
+    generalData.gender,
+    pData?.gender,
+  );
+
+  const parseNumber = (v: any): number | null => {
+    if (typeof v === "number") return v;
+    if (typeof v === "string") {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
+  const weight =
+    parseNumber(profileData.weight) ??
+    parseNumber(generalData.weight) ??
+    parseNumber(pData?.weight);
+
+  const dailyGoal =
+    parseNumber(profileData.dailyGoal) ??
+    parseNumber(profileData.daily_goal_ml) ??
+    parseNumber(generalData.dailyGoal) ??
+    parseNumber(generalData.daily_goal_ml) ??
+    parseNumber(pData?.dailyGoal) ??
+    parseNumber(pData?.daily_goal_ml) ??
+    2000;
+
+  return { name, gender, weight, dailyGoal };
+};
+
+const parseProfileAchievements = (achievementsData: any): Achievement[] => {
+  const achievementData =
+    achievementsData?.achievements ||
+    achievementsData?.data ||
+    achievementsData ||
+    [];
+  const normalizedAchievements = Array.isArray(achievementData)
+    ? achievementData
+    : [];
+
+  const unlocked = normalizedAchievements.filter((item: any) =>
+    Boolean(item.completed ?? item.is_completed ?? item.unlocked ?? false),
+  );
+
+  return unlocked.map((item: any) => {
+    const rawUnlock =
+      item.unlock_date ||
+      item.unlocked_at ||
+      item.unlockDate ||
+      item.date ||
+      item.createdAt ||
+      "";
+    const formatted = rawUnlock
+      ? new Date(rawUnlock).toLocaleDateString()
+      : "";
+
+    return {
+      icon: getAchievementIcon(item.title || item.name || ""),
+      title: item.title || item.name || "Achievement",
+      date: formatted,
+    };
+  });
+};
+
+const parseProfileCups = (cupsData: any): Cup[] => {
+  const cupData = cupsData?.cups || cupsData?.data || cupsData || [];
+  const normalizedCups = Array.isArray(cupData) ? cupData : [];
+
+  return normalizedCups.map((item: any) => ({
+    id: Number(item.id),
+    name: item.name,
+    volume: Number(item.volume ?? item.amount ?? 0),
+    unit: item.unit || "ml",
+  }));
+};
+
 export default function Profile() {
   const { signOut, isLoaded: isUserLoaded, user } = useAppAuth();
   const achievementsCardRef = useRef<View>(null);
   const loadedUserIdRef = useRef<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const clerkUserId = user?.id || "";
+
+  // Synchronously peek at cache for instant 0ms render
+  const cachedProfile = clerkUserId
+    ? apiClient.getCachedData<any>(`/api/users/profile?clerkUserId=${encodeURIComponent(clerkUserId)}`)
+    : null;
+  const cachedAchievements = clerkUserId
+    ? apiClient.getCachedData<any>(`/api/users/achievements?clerkUserId=${encodeURIComponent(clerkUserId)}`)
+    : null;
+  const cachedCups = clerkUserId
+    ? apiClient.getCachedData<any>(`/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`)
+    : null;
+
+  const initialProfile = cachedProfile ? parseProfileDetails(cachedProfile, user) : null;
+  const hasCachedProfile = Boolean(initialProfile);
+
+  const [isLoadingProfile, setIsLoadingProfile] = useState(!hasCachedProfile);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [profileName, setProfileName] = useState("");
-  const [gender, setGender] = useState("");
-  const [weight, setWeight] = useState<number | null>(null);
-  const [dailyGoal, setDailyGoal] = useState<number | null>(null);
+  const [profileName, setProfileName] = useState(
+    () => initialProfile?.name || user?.fullName || user?.firstName || "",
+  );
+  const [gender, setGender] = useState(() => initialProfile?.gender ? String(initialProfile.gender) : "");
+  const [weight, setWeight] = useState<number | null>(() => initialProfile?.weight ?? null);
+  const [dailyGoal, setDailyGoal] = useState<number | null>(() => initialProfile?.dailyGoal ?? 2000);
   // Units fixed: water in ml, weight in kg
   const [showAddCupModal, setShowAddCupModal] = useState(false);
 
@@ -76,25 +198,34 @@ export default function Profile() {
   // Input modal states
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showDailyGoalModal, setShowDailyGoalModal] = useState(false);
-  const [weightInput, setWeightInput] = useState("");
-  const [dailyGoalInput, setDailyGoalInput] = useState("");
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [cups, setCups] = useState<Cup[]>([]);
+  const [weightInput, setWeightInput] = useState(() =>
+    initialProfile?.weight !== null && initialProfile?.weight !== undefined
+      ? String(initialProfile.weight)
+      : "",
+  );
+  const [dailyGoalInput, setDailyGoalInput] = useState(() =>
+    initialProfile?.dailyGoal !== null && initialProfile?.dailyGoal !== undefined
+      ? String(initialProfile.dailyGoal)
+      : "2000",
+  );
+  const [achievements, setAchievements] = useState<Achievement[]>(() =>
+    cachedAchievements ? parseProfileAchievements(cachedAchievements) : [],
+  );
+  const [cups, setCups] = useState<Cup[]>(() =>
+    cachedCups ? parseProfileCups(cachedCups) : [],
+  );
 
   const getClerkUserId = () => user?.id || "";
 
-  const pickValue = <T,>(...values: Array<T | null | undefined>) =>
-    values.find((value) => value !== null && value !== undefined);
-
   const loadProfileData = async (isRefresh = false) => {
-    const clerkUserId = getClerkUserId();
-    if (!clerkUserId) {
+    const uid = getClerkUserId();
+    if (!uid) {
       if (!isRefresh) setIsLoadingProfile(false);
       return;
     }
 
-    const isFirstLoadForUser = loadedUserIdRef.current !== clerkUserId;
-    if (!isRefresh && isFirstLoadForUser) {
+    const isFirstLoadForUser = loadedUserIdRef.current !== uid;
+    if (!isRefresh && isFirstLoadForUser && !hasCachedProfile) {
       setIsLoadingProfile(true);
     }
 
@@ -572,23 +703,13 @@ export default function Profile() {
     ]);
   };
 
-  const getAchievementIcon = (title: string) => {
-    if (title.includes("15")) {
-      return <FifteenDayStreakIcon width={50} height={51} />;
-    }
-    if (title.includes("7")) {
-      return <SevenDayStreakIcon width={50} height={51} />;
-    }
-    return <ThreeDayStreakIcon width={50} height={51} />;
-  };
-
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await loadProfileData(true);
     setIsRefreshing(false);
   }, [user?.id]);
 
-  if (isLoadingProfile) {
+  if (isLoadingProfile && !hasCachedProfile && !profileName) {
     return (
       <View className="flex-1 bg-[#FAFAFA] justify-center items-center">
         <ActivityIndicator size="large" color="#0090C8" />
@@ -692,13 +813,13 @@ export default function Profile() {
       />
 
       <ScrollView
-        className="bg-[#FAFAFA]"
+        className="flex-1 bg-[#FAFAFA]"
         contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
       >
-        <SafeAreaView className="flex flex-col flex-1 justify-start px-6 pt-6">
+        <View className="flex flex-col flex-1 justify-start px-6 pt-2 pb-6">
           {/* Profile Header */}
           <View className="bg-white border border-[#E4E4E7] rounded-2xl flex-row items-center justify-between pl-4 pr-6 py-4 mb-6">
             <View className="flex-row items-center gap-4 flex-1">
@@ -973,7 +1094,7 @@ export default function Profile() {
               </>
             )}
           </TouchableOpacity>
-        </SafeAreaView>
+        </View>
       </ScrollView>
     </>
   );

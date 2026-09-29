@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { useAppAuth } from "@/utils/auth";
 
@@ -147,8 +146,12 @@ export default function AI() {
   };
 
   return (
-    <ScrollView ref={scrollViewRef} contentContainerStyle={{ paddingBottom: 100 }}>
-      <SafeAreaView className="flex flex-col flex-1 justify-start px-6 pt-6">
+    <ScrollView
+      ref={scrollViewRef}
+      className="flex-1 bg-[#FAFAFA]"
+      contentContainerStyle={{ paddingBottom: 100 }}
+    >
+      <View className="flex flex-col flex-1 justify-start px-6 pt-2 pb-6">
         <View className="bg-white rounded-2xl border border-[#E4E4E7] p-6">
           {/* Header */}
           <View className="mb-6">
@@ -354,7 +357,7 @@ export default function AI() {
             </TouchableOpacity>
           </View>
         )}
-      </SafeAreaView>
+      </View>
     </ScrollView>
   );
 }

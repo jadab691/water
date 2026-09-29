@@ -20,7 +20,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 type BadgeCardProps = {
   title: string;
@@ -231,112 +230,113 @@ const BadgeCard = ({
   );
 };
 
+const buildDefaultBadges = (): BadgeState[] => {
+  return badgeCatalog.map((badge) => ({
+    ...badge,
+    completed: false,
+    progressText: badge.target ? `0/${badge.target}` : undefined,
+    statusText: "In progress",
+  }));
+};
+
+const normalizeAchievements = (data: any): BadgeApiItem[] => {
+  const items = Array.isArray(data?.achievements)
+    ? data.achievements
+    : Array.isArray(data?.data)
+      ? data.data
+      : Array.isArray(data)
+        ? data
+        : [];
+
+  return items.map((item: BadgeApiItem) => ({
+    badgeId: String(
+      item.badgeId || item.badge_id || item.id || item.code || "",
+    ),
+    badgeNum: toNumber(
+      item.badge_id ?? item.badgeId ?? item.id ?? item.code ?? 0,
+    ),
+    title: String(item.title || item.name || "Achievement"),
+    status: item.status ? String(item.status) : "",
+    completed: Boolean(
+      item.completed ?? item.is_completed ?? item.unlocked ?? false,
+    ),
+    progress: toNumber(
+      item.progress ??
+        item.current ??
+        item.streak ??
+        item.value ??
+        item.total ??
+        0,
+    ),
+    target: toNumber(item.target ?? item.goal ?? item.requirement ?? 0),
+    unlockDate: String(
+      item.unlockDate ||
+        item.unlock_date ||
+        item.unlocked_at ||
+        item.date ||
+        "",
+    ),
+  }));
+};
+
+const buildBadgesFromApi = (data: any): BadgeState[] => {
+  const normalized = normalizeAchievements(data);
+  if (!normalized.length) return buildDefaultBadges();
+
+  return normalized.map((item) => {
+    const title = item.title || "Achievement";
+    const completed = Boolean(item.completed);
+    const target = item.target || 0;
+    const progress = item.progress || 0;
+    const progressText = target ? `${progress}/${target}` : undefined;
+    const rawStatus = item.status
+      ? item.status
+      : completed
+        ? "Completed"
+        : "In progress";
+    const statusText =
+      rawStatus === progressText || rawStatus === "In progress"
+        ? undefined
+        : rawStatus;
+    const badgeNumber = item.badgeNum || toNumber(item.badgeId || "0");
+    const badgeId = item.badgeId || title.toLowerCase();
+    const rawUnlock = item.unlockDate || undefined;
+    const unlockDate = rawUnlock
+      ? new Date(rawUnlock).toLocaleDateString()
+      : undefined;
+    const icon = badgeIconMap[badgeNumber] ?? getBadgeIcon(badgeId, title);
+
+    return {
+      title,
+      badgeId,
+      target,
+      icon,
+      completed,
+      progressText,
+      statusText,
+      unlockDate,
+    };
+  });
+};
+
 export default function Badges() {
   const { user } = useAppAuth();
-  const [badges, setBadges] = useState<BadgeState[]>(() =>
-    badgeCatalog.map((badge) => ({
-      ...badge,
-      completed: false,
-      progressText: badge.target ? `0/${badge.target}` : undefined,
-      statusText: "In progress",
-    })),
-  );
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const clerkUserId = user?.id || "";
   const { width } = useWindowDimensions();
 
-  const buildDefaultBadges = useCallback((): BadgeState[] => {
-    return badgeCatalog.map((badge) => ({
-      ...badge,
-      completed: false,
-      progressText: badge.target ? `0/${badge.target}` : undefined,
-      statusText: "In progress",
-    }));
-  }, []);
+  // Synchronously peek at cache for instant 0ms mount
+  const cachedAchievements = clerkUserId
+    ? apiClient.getCachedData<any>(`/api/users/achievements?clerkUserId=${encodeURIComponent(clerkUserId)}`)
+    : null;
 
-  const normalizeAchievements = useCallback((data: any): BadgeApiItem[] => {
-    const items = Array.isArray(data?.achievements) ? data.achievements : [];
-
-    return items.map((item: BadgeApiItem) => ({
-      badgeId: String(
-        item.badgeId || item.badge_id || item.id || item.code || "",
-      ),
-      // keep numeric id when available for direct mapping
-      badgeNum: toNumber(
-        item.badge_id ?? item.badgeId ?? item.id ?? item.code ?? 0,
-      ),
-      title: String(item.title || item.name || "Achievement"),
-      status: item.status ? String(item.status) : "",
-      completed: Boolean(
-        item.completed ?? item.is_completed ?? item.unlocked ?? false,
-      ),
-      progress: toNumber(
-        item.progress ??
-          item.current ??
-          item.streak ??
-          item.value ??
-          item.total ??
-          0,
-      ),
-      target: toNumber(item.target ?? item.goal ?? item.requirement ?? 0),
-      unlockDate: String(
-        item.unlockDate ||
-          item.unlock_date ||
-          item.unlocked_at ||
-          item.date ||
-          "",
-      ),
-    }));
-  }, []);
-
-  const buildBadgesFromApi = useCallback(
-    (data: any): BadgeState[] => {
-      const normalized = normalizeAchievements(data);
-      if (!normalized.length) return buildDefaultBadges();
-
-      return normalized.map((item) => {
-        const title = item.title || "Achievement";
-        const completed = Boolean(item.completed);
-        const target = item.target || 0;
-        const progress = item.progress || 0;
-        const progressText = target ? `${progress}/${target}` : undefined;
-        const rawStatus = item.status
-          ? item.status
-          : completed
-            ? "Completed"
-            : "In progress";
-        // avoid duplicating progress (e.g., "0/3") or showing the generic "In progress"
-        const statusText =
-          rawStatus === progressText || rawStatus === "In progress"
-            ? undefined
-            : rawStatus;
-        const badgeNumber = item.badgeNum || toNumber(item.badgeId || "0");
-        const badgeId = item.badgeId || title.toLowerCase();
-        const rawUnlock = item.unlockDate || undefined;
-        const unlockDate = rawUnlock
-          ? new Date(rawUnlock).toLocaleDateString()
-          : undefined;
-        const icon = badgeIconMap[badgeNumber] ?? getBadgeIcon(badgeId, title);
-
-        return {
-          title,
-          badgeId,
-          target,
-          icon,
-          completed,
-          progressText,
-          statusText,
-          unlockDate,
-        };
-      });
-    },
-    [buildDefaultBadges, normalizeAchievements],
+  const [badges, setBadges] = useState<BadgeState[]>(() =>
+    cachedAchievements ? buildBadgesFromApi(cachedAchievements) : buildDefaultBadges(),
   );
+  const [isLoading, setIsLoading] = useState(!cachedAchievements);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadBadges = useCallback(async (forceRefresh = false) => {
     if (!clerkUserId) {
-      setBadges(buildDefaultBadges());
       setIsLoading(false);
       return;
     }
@@ -347,20 +347,16 @@ export default function Badges() {
         { forceRefresh },
       );
 
-      if (res.success) {
+      if (res.success && res.data) {
         setBadges(buildBadgesFromApi(res.data));
-        return;
       }
-
-      setBadges(buildDefaultBadges());
     } catch (error) {
       console.error("Error loading achievements:", error);
-      setBadges(buildDefaultBadges());
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [buildBadgesFromApi, buildDefaultBadges, clerkUserId]);
+  }, [clerkUserId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -385,12 +381,13 @@ export default function Badges() {
 
   return (
     <ScrollView
+      className="flex-1 bg-[#FAFAFA]"
       contentContainerStyle={{ paddingBottom: 100 }}
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
       }
     >
-      <SafeAreaView className="flex flex-col flex-1 justify-start px-6 pt-6">
+      <View className="flex flex-col flex-1 justify-start px-6 pt-2 pb-6">
         <View className="flex-row items-center justify-between mb-6">
           <Text className="text-[#27272A] text-2xl" font="fustat-bold">
             Achievements
@@ -415,7 +412,7 @@ export default function Badges() {
             </View>
           ))}
         </View>
-      </SafeAreaView>
+      </View>
     </ScrollView>
   );
 }

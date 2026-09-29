@@ -26,6 +26,9 @@ export type AppUser = {
   lastName: string;
   fullName: string;
   primaryEmailAddress?: { emailAddress: string };
+  hasImage?: boolean;
+  imageUrl?: string;
+  update?: (data: any) => Promise<any>;
 };
 
 type AuthContextType = {
@@ -108,6 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       lastName: REVIEWER_CREDENTIALS.lastName,
       fullName: REVIEWER_CREDENTIALS.fullName,
       primaryEmailAddress: { emailAddress: REVIEWER_CREDENTIALS.email },
+      hasImage: false,
+      imageUrl: undefined,
+      update: async () => {},
     };
   } else if (clerkUser.user) {
     user = {
@@ -118,6 +124,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       primaryEmailAddress: clerkUser.user.primaryEmailAddress
         ? { emailAddress: clerkUser.user.primaryEmailAddress.emailAddress }
         : undefined,
+      hasImage: Boolean(clerkUser.user.hasImage),
+      imageUrl: clerkUser.user.imageUrl,
+      update: (d: any) => clerkUser.user!.update(d),
     };
   }
 

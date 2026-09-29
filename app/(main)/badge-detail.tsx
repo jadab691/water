@@ -18,7 +18,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useRef } from "react";
 import { Alert, Image, ScrollView, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 
 const badgeIcons: { [key: string]: React.ReactNode } = {
@@ -57,8 +56,11 @@ export default function BadgeDetail() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-      <SafeAreaView className="flex flex-col flex-1 justify-start px-6 pt-6">
+    <ScrollView
+      className="flex-1 bg-[#FAFAFA]"
+      contentContainerStyle={{ paddingBottom: 100 }}
+    >
+      <View className="flex flex-col flex-1 justify-start px-6 pt-2 pb-6">
         {/* Header */}
         <View className="flex-row items-center justify-between mb-6">
           <TouchableOpacity onPress={() => router.back()}>
@@ -152,7 +154,7 @@ export default function BadgeDetail() {
             </Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     </ScrollView>
   );
 }

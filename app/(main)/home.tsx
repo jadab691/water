@@ -22,7 +22,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 type Cup = {
   id: number;
@@ -44,20 +43,99 @@ type DailyStats = {
   log_count: number;
 };
 
+const normalizeCups = (cupData: any): Cup[] => {
+  const list = Array.isArray(cupData)
+    ? cupData
+    : Array.isArray(cupData?.cups)
+      ? cupData.cups
+      : Array.isArray(cupData?.data)
+        ? cupData.data
+        : [];
+  return list.map((item: any) => ({
+    id: Number(item.id),
+    name: item.name,
+    volume: Number(item.volume ?? item.amount ?? 0),
+    unit: item.unit || "ml",
+  }));
+};
+
+const normalizeDailyStats = (data: any): DailyStats => {
+  if (!data) return { total_ml: 0, goal_met: false, log_count: 0 };
+  const d = data.data || data;
+  return {
+    total_ml: Number(d.total_ml ?? 0),
+    goal_met: Boolean(d.goal_met ?? false),
+    log_count: Number(d.log_count ?? 0),
+  };
+};
+
+const normalizeWaterLogs = (logData: any): WaterLog[] => {
+  const list = Array.isArray(logData)
+    ? logData
+    : Array.isArray(logData?.logs)
+      ? logData.logs
+      : Array.isArray(logData?.data)
+        ? logData.data
+        : [];
+  return list
+    .map((item: any) => ({
+      id: Number(item.id),
+      amount_ml: Number(item.amount_ml ?? item.amount ?? 0),
+      logged_at: item.logged_at ?? new Date().toISOString(),
+      notes: item.notes ?? "",
+    }))
+    .sort(
+      (a: WaterLog, b: WaterLog) =>
+        new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime(),
+    );
+};
+
+const parseDailyGoal = (pData: any): number => {
+  if (!pData) return 2000;
+  const profileData = pData.profile || pData;
+  const settingsData = pData.settings || pData;
+  const goal = profileData.daily_goal_ml ?? settingsData.daily_goal_ml ?? 2000;
+  return typeof goal === "string" ? parseInt(goal, 10) : Number(goal) || 2000;
+};
+
 const Home = () => {
   const { user } = useAppAuth();
   const router = useRouter();
+  const clerkUserId = user?.id || "";
+
+  // Synchronously peek at cache so state can render immediately on mount (0ms)
+  const cachedProfile = clerkUserId
+    ? apiClient.getCachedData<any>(`/api/users/profile?clerkUserId=${encodeURIComponent(clerkUserId)}`)
+    : null;
+  const cachedCups = clerkUserId
+    ? apiClient.getCachedData<any>(`/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`)
+    : null;
+  const cachedStats = clerkUserId
+    ? apiClient.getCachedData<any>(`/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`)
+    : null;
+  const cachedLogs = clerkUserId
+    ? apiClient.getCachedData<any>(`/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`)
+    : null;
+
+  const hasCachedData = Boolean(cachedCups || cachedStats || cachedLogs || cachedProfile);
+
   const [modalVisible, setModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!hasCachedData);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [cups, setCups] = useState<Cup[]>([]);
-  const [waterLogs, setWaterLogs] = useState<WaterLog[]>([]);
-  const [dailyStats, setDailyStats] = useState<DailyStats>({
-    total_ml: 0,
-    goal_met: false,
-    log_count: 0,
-  });
-  const [dailyGoal, setDailyGoal] = useState(2000);
+  const [cups, setCups] = useState<Cup[]>(() => (cachedCups ? normalizeCups(cachedCups) : []));
+  const [waterLogs, setWaterLogs] = useState<WaterLog[]>(() => (cachedLogs ? normalizeWaterLogs(cachedLogs) : []));
+  const [dailyStats, setDailyStats] = useState<DailyStats>(() =>
+    cachedStats
+      ? normalizeDailyStats(cachedStats)
+      : {
+          total_ml: 0,
+          goal_met: false,
+          log_count: 0,
+        },
+  );
+  const [dailyGoal, setDailyGoal] = useState<number>(() =>
+    cachedProfile ? parseDailyGoal(cachedProfile) : 2000,
+  );
   // Unit fixed to ml
 
   const getClerkUserId = () => user?.id || "";
@@ -91,8 +169,8 @@ const Home = () => {
   };
 
   const loadHomeData = useCallback(async (forceRefresh = false) => {
-    const clerkUserId = getClerkUserId();
-    if (!clerkUserId) {
+    const uid = getClerkUserId();
+    if (!uid) {
       setIsLoading(false);
       return;
     }
@@ -100,7 +178,7 @@ const Home = () => {
     try {
       // Load profile to get daily goal and units
       const profileRes = await apiClient.makeRequest(
-        `/api/users/profile?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+        `/api/users/profile?clerkUserId=${encodeURIComponent(uid)}`,
         { forceRefresh },
       );
 
@@ -112,7 +190,7 @@ const Home = () => {
           {
             method: "POST",
             body: JSON.stringify({
-              clerkUserId,
+              clerkUserId: uid,
               email: user?.primaryEmailAddress?.emailAddress || "",
               firstName: user?.firstName || "User",
               lastName: user?.lastName || "",
@@ -125,91 +203,38 @@ const Home = () => {
       }
 
       if (pData) {
-        const profileData = pData.profile || pData;
-        const settingsData = pData.settings || pData;
-
-        // Parse daily goal
-        const goal =
-          profileData.daily_goal_ml ?? settingsData.daily_goal_ml ?? 2000;
-        if (typeof goal === "string") {
-          setDailyGoal(parseInt(goal, 10));
-        } else {
-          setDailyGoal(goal);
-        }
+        setDailyGoal(parseDailyGoal(pData));
       }
 
       // Load cups, daily stats, and water logs in parallel
       const [cupsRes, statsRes, logsRes] = await Promise.all([
         apiClient.makeRequest(
-          `/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          `/api/users/cups?clerkUserId=${encodeURIComponent(uid)}`,
           { forceRefresh },
         ),
         apiClient.makeRequest(
-          `/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          `/api/users/daily-stats?clerkUserId=${encodeURIComponent(uid)}`,
           { forceRefresh },
         ),
         apiClient.makeRequest(
-          `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          `/api/users/water-logs?clerkUserId=${encodeURIComponent(uid)}`,
           { forceRefresh },
         ),
       ]);
 
       // Process cups
       if (cupsRes.success) {
-        const cupData = (cupsRes.data as any) || [];
-        const normalizedCups = Array.isArray(cupData)
-          ? cupData
-          : Array.isArray(cupData.cups)
-            ? cupData.cups
-            : Array.isArray(cupData.data)
-              ? cupData.data
-              : [];
-
-        setCups(
-          normalizedCups.map((item: any) => ({
-            id: Number(item.id),
-            name: item.name,
-            volume: Number(item.volume ?? item.amount ?? 0),
-            unit: item.unit || "ml",
-          })),
-        );
+        setCups(normalizeCups(cupsRes.data));
       }
 
       // Process daily stats
       if (statsRes.success) {
-        const data = statsRes.data as any;
-        setDailyStats({
-          total_ml: Number(data.total_ml ?? 0),
-          goal_met: Boolean(data.goal_met ?? false),
-          log_count: Number(data.log_count ?? 0),
-        });
+        setDailyStats(normalizeDailyStats(statsRes.data));
       }
 
       // Process water logs
       if (logsRes.success) {
-        const logData = (logsRes.data as any) || [];
-        const normalizedLogs = Array.isArray(logData)
-          ? logData
-          : Array.isArray(logData.logs)
-            ? logData.logs
-            : Array.isArray(logData.data)
-              ? logData.data
-              : [];
-
-        // Sort logs by logged_at in descending order (newest first)
-        const sortedLogs = normalizedLogs
-          .map((item: any) => ({
-            id: Number(item.id),
-            amount_ml: Number(item.amount_ml ?? item.amount ?? 0),
-            logged_at: item.logged_at ?? new Date().toISOString(),
-            notes: item.notes ?? "",
-          }))
-          .sort(
-            (a: WaterLog, b: WaterLog) =>
-              new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime(),
-          );
-
-        setWaterLogs(sortedLogs);
+        setWaterLogs(normalizeWaterLogs(logsRes.data));
       }
     } catch (error) {
       console.error("Error loading home data:", error);
@@ -250,13 +275,25 @@ const Home = () => {
       notes: note,
     };
 
-    setDailyStats((prev) => ({
-      total_ml: prev.total_ml + amount,
-      goal_met: (prev.total_ml + amount) >= dailyGoal,
-      log_count: prev.log_count + 1,
-    }));
+    const newStats: DailyStats = {
+      total_ml: prevStats.total_ml + amount,
+      goal_met: (prevStats.total_ml + amount) >= dailyGoal,
+      log_count: prevStats.log_count + 1,
+    };
+    const newLogs = [optimisticLog, ...prevLogs];
 
-    setWaterLogs((prev) => [optimisticLog, ...prev]);
+    setDailyStats(newStats);
+    setWaterLogs(newLogs);
+
+    // Keep cache instantly synchronized across tab navigations
+    apiClient.setCachedData(
+      `/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+      newStats,
+    );
+    apiClient.setCachedData(
+      `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+      newLogs,
+    );
 
     // 4. Send network request in the background
     try {
@@ -275,6 +312,14 @@ const Home = () => {
         // Rollback on failure
         setDailyStats(prevStats);
         setWaterLogs(prevLogs);
+        apiClient.setCachedData(
+          `/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          prevStats,
+        );
+        apiClient.setCachedData(
+          `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          prevLogs,
+        );
         Alert.alert("Error", res.message || "Failed to log water intake.");
         return;
       }
@@ -282,9 +327,14 @@ const Home = () => {
       // If backend returned the created log with real ID, update the temp log ID
       if (res.data && (res.data as any).id) {
         const realId = Number((res.data as any).id);
-        setWaterLogs((prev) =>
-          prev.map((l) => (l.id === tempId ? { ...l, id: realId } : l))
-        );
+        setWaterLogs((prev) => {
+          const updated = prev.map((l) => (l.id === tempId ? { ...l, id: realId } : l));
+          apiClient.setCachedData(
+            `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+            updated,
+          );
+          return updated;
+        });
       }
     } catch (error) {
       console.error("Error logging water:", error);
@@ -321,12 +371,13 @@ const Home = () => {
 
   return (
     <ScrollView
+      className="flex-1 bg-[#FAFAFA]"
       contentContainerStyle={{ paddingBottom: 100 }}
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
       }
     >
-      <SafeAreaView className="flex flex-col flex-1 justify-start bg-[#FAFAFA] p-6">
+      <View className="flex flex-col flex-1 justify-start px-6 pt-2 pb-6">
         <View className="flex flex-row w-full items-center justify-between mb-8">
           <View className="flex-1 pr-4">
             <Text
@@ -405,7 +456,7 @@ const Home = () => {
         </View>
 
         <View className="flex flex-col align-middle w-full">
-          {isLoading ? (
+          {isLoading && cups.length === 0 && dailyStats.total_ml === 0 ? (
             <View className="bg-[#EEFAFF] flex justify-center items-center rounded-full size-60 shadow-2xl border-4 border-white overflow-hidden self-center">
               <ActivityIndicator size="large" color="#0090C8" />
             </View>
@@ -426,7 +477,7 @@ const Home = () => {
             / {dailyGoal} ml
           </Text>
 
-          {isLoading ? (
+          {isLoading && cups.length === 0 ? (
             <View className="py-8 items-center">
               <ActivityIndicator size="small" color="#0090C8" />
             </View>
@@ -470,7 +521,7 @@ const Home = () => {
             Today's Activity
           </Text>
 
-          {isLoading ? (
+          {isLoading && waterLogs.length === 0 ? (
             <View className="w-full py-4 items-center">
               <ActivityIndicator size="small" color="#0090C8" />
             </View>
@@ -498,7 +549,7 @@ const Home = () => {
           unit={"ml"}
           showNote={false}
         />
-      </SafeAreaView>
+      </View>
     </ScrollView>
   );
 };

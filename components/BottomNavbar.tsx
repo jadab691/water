@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { usePathname, useRouter } from "expo-router";
 import React from "react";
 import { TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { AwardIcon, CalenderIcon, HomeIcon, SparkleIcon } from "./SVGIcons";
 
@@ -10,6 +11,7 @@ export default function BottomNavbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   // Responsive SVG height maintaining the 412:128 aspect ratio
   const svgHeight = (width * 128) / 412;
@@ -22,9 +24,10 @@ export default function BottomNavbar() {
 
   return (
     <View
-      className="absolute bottom-2 left-0 right-0 items-center"
+      className="absolute left-0 right-0 items-center"
       pointerEvents="box-none"
       style={{
+        bottom: Math.max(8, insets.bottom),
         height: svgHeight,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },

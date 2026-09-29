@@ -16,6 +16,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { CLERK_PUBLISHABLE_KEY } from "@/utils/constants";
 import { AuthProvider } from "@/utils/auth";
 import "./global.css";
@@ -69,9 +70,11 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <AuthProvider>
-        <RootLayoutContent />
-      </AuthProvider>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <RootLayoutContent />
+        </AuthProvider>
+      </SafeAreaProvider>
     </ClerkProvider>
   );
 }

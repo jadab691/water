@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 
 type WeekEntry = {
@@ -22,88 +21,91 @@ type WeekEntry = {
   value: number;
 };
 
+const buildEmptyWeek = (): WeekEntry[] => {
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(today.getDate() - today.getDay());
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + i);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    const dateKey = `${y}-${m}-${d}`;
+    const dayLabel = date.toLocaleDateString("en-US", { weekday: "short" });
+
+    return { date: dateKey, day: dayLabel, value: 0 };
+  });
+};
+
+const normalizeWeekData = (input: any): WeekEntry[] => {
+  const emptyWeek = buildEmptyWeek();
+  const items = Array.isArray(input)
+    ? input
+    : Array.isArray(input?.week)
+      ? input.week
+      : Array.isArray(input?.data)
+        ? input.data
+        : [];
+
+  if (!items.length) return emptyWeek;
+
+  const byDate = new Map(emptyWeek.map((item) => [item.date, item]));
+
+  items.forEach((item: any) => {
+    const date = String(item.date || "");
+    const dayLabel = String(
+      item.day ||
+        (date
+          ? new Date(date).toLocaleDateString("en-US", {
+              weekday: "short",
+            })
+          : ""),
+    );
+    const value = Number(
+      item.total_ml ?? item.value ?? item.amount_ml ?? 0,
+    );
+
+    if (date && byDate.has(date)) {
+      byDate.set(date, {
+        date,
+        day: dayLabel || byDate.get(date)!.day,
+        value,
+      });
+      return;
+    }
+
+    if (dayLabel) {
+      const match = emptyWeek.find((entry) => entry.day === dayLabel);
+      if (match) {
+        byDate.set(match.date, { ...match, value });
+      }
+    }
+  });
+
+  return Array.from(byDate.values());
+};
+
 export default function History() {
   const { user } = useAppAuth();
   const historyContentRef = useRef<View>(null);
-  const [weekData, setWeekData] = useState<WeekEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
   const clerkUserId = user?.id || "";
 
-  const buildEmptyWeek = useCallback((): WeekEntry[] => {
-    const today = new Date();
-    const start = new Date(today);
-    start.setDate(today.getDate() - today.getDay());
+  // Synchronously peek at cache for instant 0ms mount
+  const cachedWeekly = clerkUserId
+    ? apiClient.getCachedData<any>(`/api/users/weekly-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`)
+    : null;
 
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(start);
-      date.setDate(start.getDate() + i);
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, "0");
-      const d = String(date.getDate()).padStart(2, "0");
-      const dateKey = `${y}-${m}-${d}`;
-      const dayLabel = date.toLocaleDateString("en-US", { weekday: "short" });
-
-      return { date: dateKey, day: dayLabel, value: 0 };
-    });
-  }, []);
-
-  const normalizeWeekData = useCallback(
-    (input: any): WeekEntry[] => {
-      const emptyWeek = buildEmptyWeek();
-      const items = Array.isArray(input)
-        ? input
-        : Array.isArray(input?.week)
-          ? input.week
-          : Array.isArray(input?.data)
-            ? input.data
-            : [];
-
-      if (!items.length) return emptyWeek;
-
-      const byDate = new Map(emptyWeek.map((item) => [item.date, item]));
-
-      items.forEach((item: any) => {
-        const date = String(item.date || "");
-        const dayLabel = String(
-          item.day ||
-            (date
-              ? new Date(date).toLocaleDateString("en-US", {
-                  weekday: "short",
-                })
-              : ""),
-        );
-        const value = Number(
-          item.total_ml ?? item.value ?? item.amount_ml ?? 0,
-        );
-
-        if (date && byDate.has(date)) {
-          byDate.set(date, {
-            date,
-            day: dayLabel || byDate.get(date)!.day,
-            value,
-          });
-          return;
-        }
-
-        if (dayLabel) {
-          const match = emptyWeek.find((entry) => entry.day === dayLabel);
-          if (match) {
-            byDate.set(match.date, { ...match, value });
-          }
-        }
-      });
-
-      return Array.from(byDate.values());
-    },
-    [buildEmptyWeek],
+  const [weekData, setWeekData] = useState<WeekEntry[]>(() =>
+    cachedWeekly ? normalizeWeekData(cachedWeekly) : buildEmptyWeek(),
   );
+  const [isLoading, setIsLoading] = useState(!cachedWeekly);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadHistoryData = useCallback(async (forceRefresh = false) => {
     if (!clerkUserId) {
       setIsLoading(false);
-      setWeekData(buildEmptyWeek());
       return;
     }
 
@@ -113,20 +115,16 @@ export default function History() {
         { forceRefresh },
       );
 
-      if (res.success) {
+      if (res.success && res.data) {
         setWeekData(normalizeWeekData(res.data));
-        return;
       }
-
-      setWeekData(buildEmptyWeek());
     } catch (error) {
       console.error("Error loading weekly history:", error);
-      setWeekData(buildEmptyWeek());
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [buildEmptyWeek, clerkUserId, normalizeWeekData]);
+  }, [clerkUserId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -180,13 +178,13 @@ export default function History() {
 
   return (
     <ScrollView
-      className="bg-[#FAFAFA]"
+      className="flex-1 bg-[#FAFAFA]"
       contentContainerStyle={{ paddingBottom: 100 }}
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
       }
     >
-      <SafeAreaView className="flex flex-col flex-1 justify-start px-6 pt-6">
+      <View className="flex flex-col flex-1 justify-start px-6 pt-2 pb-6">
         {/* Title */}
         <View className="mb-6">
           <Text className="text-[#27272A] text-2xl" font="fustat-bold">
@@ -296,7 +294,7 @@ export default function History() {
             </Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     </ScrollView>
   );
 }
