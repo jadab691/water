@@ -10,6 +10,7 @@ import Entypo from "@expo/vector-icons/Entypo";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -224,18 +225,45 @@ const Home = () => {
     }, [loadHomeData]),
   );
 
-  const handleAddWaterFromCup = async (cup: Cup) => {
+  const logWaterOptimistically = async (amount: number, note: string) => {
     const clerkUserId = getClerkUserId();
     if (!clerkUserId) {
       Alert.alert("Error", "User not authenticated.");
       return;
     }
 
+    // 1. Snapshot previous state for rollback if network fails
+    const prevStats = dailyStats;
+    const prevLogs = waterLogs;
+
+    // 2. Trigger instant haptic feedback
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+
+    // 3. Immediately update UI state (0ms latency!)
+    const tempId = Date.now();
+    const optimisticLog: WaterLog = {
+      id: tempId,
+      amount_ml: amount,
+      logged_at: new Date().toISOString(),
+      notes: note,
+    };
+
+    setDailyStats((prev) => ({
+      total_ml: prev.total_ml + amount,
+      goal_met: (prev.total_ml + amount) >= dailyGoal,
+      log_count: prev.log_count + 1,
+    }));
+
+    setWaterLogs((prev) => [optimisticLog, ...prev]);
+
+    // 4. Send network request in the background
     try {
       const payload = {
         clerkUserId,
-        amount_ml: cup.volume,
-        notes: `Added from ${cup.name}`,
+        amount_ml: amount,
+        notes: note,
       };
 
       const res = await apiClient.makeRequest("/api/users/water-logs", {
@@ -243,56 +271,42 @@ const Home = () => {
         body: JSON.stringify(payload),
       });
 
-      if (res.success) {
-        // Reload data to reflect the new log with fresh network data
-        await loadHomeData(true);
+      if (!res.success) {
+        // Rollback on failure
+        setDailyStats(prevStats);
+        setWaterLogs(prevLogs);
+        Alert.alert("Error", res.message || "Failed to log water intake.");
         return;
       }
 
-      Alert.alert("Error", res.message || "Failed to log water intake.");
+      // If backend returned the created log with real ID, update the temp log ID
+      if (res.data && (res.data as any).id) {
+        const realId = Number((res.data as any).id);
+        setWaterLogs((prev) =>
+          prev.map((l) => (l.id === tempId ? { ...l, id: realId } : l))
+        );
+      }
     } catch (error) {
       console.error("Error logging water:", error);
-      Alert.alert("Error", "Failed to log water intake. Please try again.");
+      // Rollback on error
+      setDailyStats(prevStats);
+      setWaterLogs(prevLogs);
+      Alert.alert("Error", "Failed to log water intake. Please check your connection.");
     }
   };
 
-  const handleAddCustomWater = async (amount: string, note?: string) => {
-    const clerkUserId = getClerkUserId();
-    if (!clerkUserId) {
-      Alert.alert("Error", "User not authenticated.");
-      return;
-    }
+  const handleAddWaterFromCup = (cup: Cup) => {
+    logWaterOptimistically(cup.volume, `Added from ${cup.name}`);
+  };
 
+  const handleAddCustomWater = (amount: string, note?: string) => {
     const volume = parseInt(amount, 10);
     if (Number.isNaN(volume) || volume <= 0) {
       Alert.alert("Error", "Please enter a valid amount.");
       return;
     }
-
-    try {
-      const payload = {
-        clerkUserId,
-        amount_ml: volume,
-        notes: note ?? "",
-      };
-
-      const res = await apiClient.makeRequest("/api/users/water-logs", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-
-      if (res.success) {
-        setModalVisible(false);
-        // Reload data to reflect the new log with fresh network data
-        await loadHomeData(true);
-        return;
-      }
-
-      Alert.alert("Error", res.message || "Failed to log water intake.");
-    } catch (error) {
-      console.error("Error logging water:", error);
-      Alert.alert("Error", "Failed to log water intake. Please try again.");
-    }
+    setModalVisible(false);
+    logWaterOptimistically(volume, note ?? "");
   };
 
   const onRefresh = useCallback(async () => {
