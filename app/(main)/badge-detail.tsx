@@ -13,6 +13,7 @@ import { logo } from "@/utils/constants";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 
+import { useAppAuth } from "@/utils/auth";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useRef } from "react";
@@ -33,6 +34,7 @@ export default function BadgeDetail() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const badgeCardRef = useRef<View>(null);
+  const { user } = useAppAuth();
 
   const { title, status, badgeId, unlockDate } = params;
 
@@ -131,7 +133,7 @@ export default function BadgeDetail() {
               <View className="flex-row items-center gap-1">
                 <Ionicons name="person" size={12} color="#71717A" />
                 <Text className="text-[#71717A] text-sm" font="fustat-medium">
-                  Ahsan Habib
+                  {user?.fullName || user?.firstName || "Hydration Hero"}
                 </Text>
               </View>
             </View>
