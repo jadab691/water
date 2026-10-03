@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "water-intake-tracker",
-    "slug": "water-intake-tracker",
+    "name": "Smart Hydrate",
+    "slug": "smart-hydrate",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "waterintaketracker",
+    "scheme": "smarthydrate",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -22,7 +22,7 @@
       "predictiveBackGestureEnabled": false,
       "userInterfaceStyle": "light",
       "softwareKeyboardLayoutMode": "pan",
-      "package": "com.ahnayeforg.ahnayef",
+      "package": "com.quadiz.water",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
