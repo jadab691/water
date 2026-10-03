@@ -2,6 +2,7 @@ import {
   ArrowLeftIcon,
   FifteenDayStreakIcon,
   NinetyDayStreakIcon,
+  QuaDizIcon,
   SevenDayStreakIcon,
   SixtyDayStreakIcon,
   ThirtyDayStreakIcon,
@@ -135,6 +136,14 @@ export default function BadgeDetail() {
                 <Text className="text-[#71717A] text-sm" font="fustat-medium">
                   {user?.fullName || user?.firstName || "Hydration Hero"}
                 </Text>
+              </View>
+
+              {/* Powered by Quadiz */}
+              <View className="flex-row items-center justify-center gap-1.5 pt-3 border-t border-[#F4F4F5] w-full mt-1">
+                <Text className="text-xs text-[#A1A1AA]" font="fustat-medium">
+                  Powered by
+                </Text>
+                <QuaDizIcon width={58} height={15} />
               </View>
             </View>
           </View>
