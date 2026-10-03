@@ -87,6 +87,15 @@ const normalizeWeekData = (input: any): WeekEntry[] => {
   return Array.from(byDate.values());
 };
 
+const formatBarMetric = (val: number): string => {
+  if (!val || val === 0) return "0";
+  if (val >= 1000) {
+    const inLiters = val / 1000;
+    return inLiters % 1 === 0 ? `${inLiters}L` : `${inLiters.toFixed(1)}L`;
+  }
+  return `${val}`;
+};
+
 export default function History() {
   const { user } = useAppAuth();
   const historyContentRef = useRef<View>(null);
@@ -102,6 +111,15 @@ export default function History() {
   );
   const [isLoading, setIsLoading] = useState(!cachedWeekly);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+
+  const todayDateStr = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }, []);
 
   const loadHistoryData = useCallback(async (forceRefresh = false) => {
     if (!clerkUserId) {
@@ -151,12 +169,12 @@ export default function History() {
     [weekData],
   );
 
-  // Calculate height based on value (max height is 180px)
-  const maxHeight = 180;
-  const maxValue = bestDay;
+  // Calculate height based on value (max height is 150px)
+  const maxHeight = 150;
+  const maxValue = useMemo(() => Math.max(bestDay, 2000), [bestDay]);
   const getBarHeight = (value: number) => {
-    if (maxValue === 0) return 0;
-    return (value / maxValue) * maxHeight;
+    if (maxValue === 0 || value <= 0) return 6;
+    return Math.max(8, (value / maxValue) * maxHeight);
   };
 
   const handleShare = async () => {
@@ -260,25 +278,95 @@ export default function History() {
             </View>
 
             {/* Weekly progress chart */}
-            <View className="bg-white border border-[#E4E4E7] rounded-2xl p-6 gap-8">
-              <Text className="text-[#27272A] text-xl" font="fustat-bold">
-                Weekly progress
-              </Text>
-              <View className="flex-row items-end gap-2">
-                {weekData.map((item, index) => (
-                  <View key={index} className="flex-1 items-center gap-3">
-                    <View
-                      className="bg-[rgba(0,166,218,0.3)] rounded-lg w-full"
-                      style={{ height: getBarHeight(item.value) }}
-                    />
-                    <Text
-                      className="text-[#71717A] text-sm text-center"
-                      font="fustat-semibold"
-                    >
-                      {item.day}
+            <View className="bg-white border border-[#E4E4E7] rounded-2xl p-5 gap-4">
+              <View className="flex-row justify-between items-center">
+                <Text className="text-[#27272A] text-xl" font="fustat-bold">
+                  Weekly progress
+                </Text>
+                {selectedDayIndex !== null && weekData[selectedDayIndex] ? (
+                  <View className="bg-[#E0F2FE] px-3 py-1 rounded-full">
+                    <Text className="text-[#0090C8] text-xs" font="fustat-bold">
+                      {weekData[selectedDayIndex].day}: {weekData[selectedDayIndex].value.toLocaleString()} ml
                     </Text>
                   </View>
-                ))}
+                ) : (
+                  <Text className="text-[#71717A] text-xs" font="fustat-medium">
+                    Goal: 2000 ml
+                  </Text>
+                )}
+              </View>
+
+              <View className="flex-row items-end gap-2 pt-1">
+                {weekData.map((item, index) => {
+                  const isSelected = selectedDayIndex === index;
+                  const isToday = item.date === todayDateStr;
+                  const isBest = item.value === bestDay && item.value > 0;
+                  const barHeight = getBarHeight(item.value);
+
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        setSelectedDayIndex((prev) => (prev === index ? null : index))
+                      }
+                      className="flex-1 items-center"
+                    >
+                      {/* Fixed height container for consistent bar alignment */}
+                      <View
+                        className="w-full items-center justify-end"
+                        style={{ height: maxHeight + 26 }}
+                      >
+                        {/* Metric Count Label above bar */}
+                        <Text
+                          className={`text-[11px] mb-1.5 text-center ${
+                            isSelected
+                              ? "text-[#0090C8] font-bold"
+                              : isBest
+                                ? "text-[#0284C7] font-bold"
+                                : item.value > 0
+                                  ? "text-[#52525B] font-bold"
+                                  : "text-[#A1A1AA] font-medium"
+                          }`}
+                          font={isSelected || isBest || item.value > 0 ? "fustat-bold" : "fustat-medium"}
+                          numberOfLines={1}
+                        >
+                          {formatBarMetric(item.value)}
+                        </Text>
+
+                        {/* Bar Pillar */}
+                        <View
+                          className={`w-full rounded-lg ${
+                            isSelected
+                              ? "bg-[#0090C8]"
+                              : isBest
+                                ? "bg-[#0090C8]"
+                                : item.value > 0
+                                  ? "bg-[rgba(0,166,218,0.4)]"
+                                  : "bg-[#F4F4F5]"
+                          }`}
+                          style={{
+                            height: barHeight,
+                            borderWidth: isSelected ? 1.5 : 0,
+                            borderColor: "#0284C7",
+                          }}
+                        />
+                      </View>
+
+                      {/* Day Label below bar */}
+                      <Text
+                        className={`text-sm text-center mt-2 ${
+                          isSelected || isToday
+                            ? "text-[#0090C8] font-bold"
+                            : "text-[#71717A]"
+                        }`}
+                        font={isSelected || isToday ? "fustat-bold" : "fustat-semibold"}
+                      >
+                        {item.day}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           </View>
