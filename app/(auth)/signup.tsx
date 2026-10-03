@@ -157,6 +157,17 @@ const Signup = () => {
             }),
           },
         );
+
+        // Pre-warm client cache with 2 default cups so home screen renders immediately
+        apiClient.setCachedData(
+          `/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`,
+          {
+            cups: [
+              { id: 1, name: "Glass", volume: 250, unit: "ml" },
+              { id: 2, name: "Bottle", volume: 500, unit: "ml" },
+            ],
+          },
+        );
       } catch (backendErr) {
         console.warn("Backend profile init warning during signup:", backendErr);
       }

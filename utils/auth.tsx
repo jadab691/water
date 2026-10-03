@@ -84,6 +84,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           lastName: REVIEWER_CREDENTIALS.lastName,
         }),
       });
+
+      apiClient.setCachedData(
+        `/api/users/cups?clerkUserId=${encodeURIComponent(REVIEWER_CREDENTIALS.userId)}`,
+        {
+          cups: [
+            { id: 1, name: "Glass", volume: 250, unit: "ml" },
+            { id: 2, name: "Bottle", volume: 500, unit: "ml" },
+          ],
+        },
+      );
     } catch (e) {
       console.warn("Could not pre-init reviewer profile:", e);
     }

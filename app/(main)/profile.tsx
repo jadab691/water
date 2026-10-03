@@ -144,9 +144,17 @@ const parseProfileAchievements = (achievementsData: any): Achievement[] => {
   });
 };
 
+const DEFAULT_CUPS: Cup[] = [
+  { id: 1, name: "Glass", volume: 250, unit: "ml" },
+  { id: 2, name: "Bottle", volume: 500, unit: "ml" },
+];
+
 const parseProfileCups = (cupsData: any): Cup[] => {
   const cupData = cupsData?.cups || cupsData?.data || cupsData || [];
   const normalizedCups = Array.isArray(cupData) ? cupData : [];
+  if (normalizedCups.length === 0) {
+    return DEFAULT_CUPS;
+  }
 
   return normalizedCups.map((item: any) => ({
     id: Number(item.id),

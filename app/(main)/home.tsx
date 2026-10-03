@@ -44,6 +44,11 @@ type DailyStats = {
   log_count: number;
 };
 
+export const DEFAULT_CUPS: Cup[] = [
+  { id: 1, name: "Glass", volume: 250, unit: "ml" },
+  { id: 2, name: "Bottle", volume: 500, unit: "ml" },
+];
+
 const normalizeCups = (cupData: any): Cup[] => {
   const list = Array.isArray(cupData)
     ? cupData
@@ -52,6 +57,9 @@ const normalizeCups = (cupData: any): Cup[] => {
       : Array.isArray(cupData?.data)
         ? cupData.data
         : [];
+  if (list.length === 0) {
+    return DEFAULT_CUPS;
+  }
   return list.map((item: any) => ({
     id: Number(item.id),
     name: item.name,
