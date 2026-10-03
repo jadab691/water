@@ -196,7 +196,7 @@ const BadgeCard = ({
         >
           {title}
         </Text>
-        {progressText ? (
+        {!completed && progressText ? (
           <Text
             className="text-[#52525B] text-sm text-center"
             font="fustat-medium"
@@ -206,7 +206,11 @@ const BadgeCard = ({
         ) : null}
         {statusText ? (
           <Text
-            className="text-[#71717A] text-xs text-center"
+            className={
+              completed
+                ? "text-[#D97706] text-xs text-center"
+                : "text-[#71717A] text-xs text-center"
+            }
             font="fustat-medium"
           >
             {statusText}
@@ -288,7 +292,11 @@ const buildBadgesFromApi = (data: any): BadgeState[] => {
     const completed = Boolean(item.completed);
     const target = item.target || 0;
     const progress = item.progress || 0;
-    const progressText = target ? `${progress}/${target}` : undefined;
+    const progressText = completed
+      ? undefined
+      : target
+        ? `${progress}/${target}`
+        : undefined;
     const rawStatus = item.status
       ? item.status
       : completed
