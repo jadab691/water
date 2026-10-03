@@ -1,7 +1,8 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import RNDateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import React, { useState } from "react";
-import { TextInput, View } from "react-native";
+import { TextInput, TouchableOpacity, View } from "react-native";
 
 type FormInputProps = {
   value: any;
@@ -10,6 +11,9 @@ type FormInputProps = {
   isPassword?: boolean;
   styles?: React.HTMLAttributes<HTMLElement>["className"];
   type?: string;
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  autoCorrect?: boolean;
+  keyboardType?: "default" | "email-address" | "numeric" | "phone-pad";
 } & (
   | { type: "select"; selectItems: { label: string; value: any }[] }
   | { type?: Exclude<string, "select">; selectItems?: never }
@@ -23,8 +27,12 @@ const FormInput = ({
   type,
   styles,
   selectItems = [],
+  autoCapitalize,
+  autoCorrect,
+  keyboardType = "default",
 }: FormInputProps) => {
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <View
@@ -74,13 +82,39 @@ const FormInput = ({
             ></RNDateTimePicker>
           )}
         </>
+      ) : isPassword ? (
+        <View className="flex-row items-center justify-between">
+          <TextInput
+            value={value}
+            keyboardType={keyboardType}
+            autoCapitalize={autoCapitalize || "none"}
+            autoCorrect={autoCorrect !== undefined ? autoCorrect : false}
+            onChangeText={(e) => action && action(e)}
+            placeholder={`${label}`}
+            secureTextEntry={!showPassword}
+            className="flex-1 py-0 text-base"
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword((prev) => !prev)}
+            activeOpacity={0.6}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            className="pl-2 pr-1 py-1"
+          >
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={22}
+              color="#71717A"
+            />
+          </TouchableOpacity>
+        </View>
       ) : (
         <TextInput
           value={value}
-          keyboardType="default"
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
           onChangeText={(e) => action && action(e)}
           placeholder={`${label}`}
-          secureTextEntry={isPassword}
         />
       )}
     </View>

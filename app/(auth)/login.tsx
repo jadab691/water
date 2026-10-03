@@ -288,21 +288,32 @@ const Login = () => {
     }
 
     const inputIdentifier = formState.email.trim().toLowerCase();
-    const isReviewerLogin =
-      (inputIdentifier === REVIEWER_CREDENTIALS.email ||
-        inputIdentifier === REVIEWER_CREDENTIALS.alternativeUsername ||
-        inputIdentifier === "reviewer") &&
-      formState.password === REVIEWER_CREDENTIALS.password;
+    const inputPassword = formState.password.trim();
 
-    if (isReviewerLogin) {
-      try {
-        await loginAsReviewer();
-        router.replace("/home");
-        return;
-      } catch (err) {
-        console.error("Reviewer login error:", err);
-      } finally {
+    const isReviewerAccount =
+      inputIdentifier === REVIEWER_CREDENTIALS.email.toLowerCase() ||
+      inputIdentifier === REVIEWER_CREDENTIALS.alternativeUsername.toLowerCase() ||
+      inputIdentifier === "reviewer" ||
+      inputIdentifier === "reviewer@smarthydrate.com" ||
+      inputIdentifier === "user_google_reviewer";
+
+    if (isReviewerAccount) {
+      if (inputPassword === REVIEWER_CREDENTIALS.password) {
+        try {
+          await loginAsReviewer();
+          router.replace("/home");
+          return;
+        } catch (err) {
+          console.error("Reviewer login error:", err);
+          setGeneralError("Failed to initialize reviewer session. Please try again.");
+          return;
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setGeneralError("Invalid password for reviewer account (Check capitalization and '!' symbol).");
         setIsLoading(false);
+        return;
       }
     }
 
@@ -630,6 +641,9 @@ const Login = () => {
                 label="Email or Username"
                 value={formState.email}
                 action={(e: string) => setFormState({ ...formState, email: e })}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
                 styles="bg-white"
               />
               <FormInput
@@ -638,6 +652,8 @@ const Login = () => {
                 action={(e: string) =>
                   setFormState({ ...formState, password: e })
                 }
+                autoCapitalize="none"
+                autoCorrect={false}
                 isPassword={true}
                 styles="bg-white"
               />

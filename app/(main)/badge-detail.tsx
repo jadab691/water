@@ -37,8 +37,6 @@ export default function BadgeDetail() {
 
   const { title, status, badgeId, unlockDate } = params;
 
-
-
   const handleShare = async () => {
     try {
       // Capture the badge card as image
@@ -92,8 +90,8 @@ export default function BadgeDetail() {
             className="bg-white rounded-3xl p-12 items-center gap-12 w-full"
           >
             {/* App Logo */}
-            <View className="flex flex-row items-center justify-center">
-              <Image source={logo} className="size-14" resizeMode="contain" />
+            <View className="flex flex-row items-center justify-center gap-x-2.5">
+              <Image source={logo} className="size-10" resizeMode="contain" />
 
               <View className="flex flex-col text-center justify-center mb-1">
                 <Text className="text-center text-sm" font="fredoka">
@@ -144,7 +142,6 @@ export default function BadgeDetail() {
 
         {/* Action Buttons */}
         <View className="flex-row gap-4">
-
           <TouchableOpacity
             onPress={handleShare}
             className="flex-1 bg-[#0090C8] rounded-2xl py-4 items-center"
