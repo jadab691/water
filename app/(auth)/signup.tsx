@@ -1,8 +1,7 @@
 import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
 import Text from "@/components/Text";
-import { apiClient } from "@/utils/api";
-import { useAuth, useSignUp } from "@clerk/expo";
+import { useSignUp } from "@clerk/expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -18,7 +17,6 @@ type FormState = {
 
 const Signup = () => {
   const router = useRouter();
-  const { isSignedIn } = useAuth();
   const { signUp } = useSignUp();
 
   const [generalError, setGeneralError] = useState<string>("");
@@ -130,46 +128,10 @@ const Signup = () => {
         return;
       }
 
-      const clerkUserId = signUp.createdUserId;
-
-      if (!clerkUserId) {
+      if (!signUp.createdUserId) {
         setGeneralError("Verification incomplete. Please check your code.");
         setIsLoading(false);
         return;
-      }
-
-      const trimmedName = formState.name.trim();
-      const nameParts = trimmedName.split(/\s+/);
-      const firstName = nameParts[0];
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-
-      // Initialize profile on backend first before activating session
-      try {
-        await apiClient.makeRequest(
-          "/api/users/initialize-profile",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              clerkUserId,
-              email: formState.email.trim(),
-              firstName,
-              lastName,
-            }),
-          },
-        );
-
-        // Pre-warm client cache with 2 default cups so home screen renders immediately
-        apiClient.setCachedData(
-          `/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-          {
-            cups: [
-              { id: 1, name: "Glass", volume: 250, unit: "ml" },
-              { id: 2, name: "Bottle", volume: 500, unit: "ml" },
-            ],
-          },
-        );
-      } catch (backendErr) {
-        console.warn("Backend profile init warning during signup:", backendErr);
       }
 
       const finalizeResult = await signUp.finalize();
@@ -256,17 +218,17 @@ const Signup = () => {
             disabled={isLoading}
           />
 
-          {infoMessage && (
+          {infoMessage ? (
             <Text className="text-[#0C4A6E] text-sm text-center -mt-2">
               {infoMessage}
             </Text>
-          )}
+          ) : null}
 
-          {generalError && (
+          {generalError ? (
             <Text className="text-[#DC2626] text-sm text-center -mt-2">
               {generalError}
             </Text>
-          )}
+          ) : null}
 
           <Link
             href="/login"
@@ -275,6 +237,7 @@ const Signup = () => {
             Already have account?{" "}
             <Text className="font-bold text-[#0090C8]">Log In</Text>
           </Link>
+          <View nativeID="clerk-captcha" />
         </View>
       </View>
     </SafeAreaView>

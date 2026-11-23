@@ -1,44 +1,24 @@
 import Text from "@/components/Text";
 import { logo } from "@/utils/constants";
 import { useAppAuth } from "@/utils/auth";
-import { router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
-import { useEffect, useState } from "react";
+import { Link, router } from "expo-router";
+import { useEffect } from "react";
 import { Image, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { QuaDizIcon } from "../components/SVGIcons";
 
-const INTRO_SEEN_KEY = "has_seen_intro_screen";
-
 export default function Index() {
   const { isLoaded, isSignedIn } = useAppAuth();
-  const [isCheckingFirstLaunch, setIsCheckingFirstLaunch] = useState(true);
 
   useEffect(() => {
-    const checkFirstLaunch = async () => {
-      if (!isLoaded) {
-        return;
-      }
-
-      const hasSeenIntro = await SecureStore.getItemAsync(INTRO_SEEN_KEY);
-
-      if (hasSeenIntro === "true") {
-        router.replace(isSignedIn ? "/home" : "/login");
-        return;
-      }
-
-      setIsCheckingFirstLaunch(false);
-    };
-
-    checkFirstLaunch();
+    if (isLoaded && isSignedIn) router.replace("/home");
   }, [isLoaded, isSignedIn]);
 
-  const handleGetStarted = async () => {
-    await SecureStore.setItemAsync(INTRO_SEEN_KEY, "true");
+  const handleGetStarted = () => {
     router.replace("/signup");
   };
 
-  if (isCheckingFirstLaunch) {
+  if (!isLoaded || isSignedIn) {
     return null;
   }
 
@@ -57,7 +37,7 @@ export default function Index() {
         </View>
 
         <Text className=" text-center text-base text-[#71717a] px-5">
-          Track your daily water intake with AI-Powered insights. Stay healthy
+          Track your daily water intake with offline insights. Stay healthy
           energized & focused.
         </Text>
       </View>
@@ -69,6 +49,9 @@ export default function Index() {
           Get Started
         </Text>
       </TouchableOpacity>
+      <Link href="/login" className="text-center text-base text-[#71717A] mb-4">
+        Already have an account? Log in
+      </Link>
       <View className="flex flex-row items-center justify-center gap-2 mb-2">
         <Text className="text-center text-base text-[#71717A] justify-center text-Color-Solid-Color-Default-default-500 font-medium tracking-tight">
           Powered by:

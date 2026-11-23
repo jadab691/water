@@ -1,7 +1,10 @@
 import { DoubleSparkleIcon, SparkleIcon } from "@/components/SVGIcons";
 import Text from "@/components/Text";
+import { useAppAuth } from "@/utils/auth";
+import { getLocalProfile } from "@/utils/localDatabase";
+import { generateOfflineGoalSuggestion } from "@/utils/offlineLogic";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,20 +15,6 @@ import {
   View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { useAppAuth } from "@/utils/auth";
-
-const ArrowDownIcon = () => (
-  <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
-    <Path
-      d="M14.9401 6.71252L10.0501 11.6025C9.47256 12.18 8.52756 12.18 7.95006 11.6025L3.06006 6.71252"
-      stroke="#52525B"
-      strokeWidth={1.5}
-      strokeMiterlimit={10}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 const ErrorIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
@@ -55,13 +44,11 @@ type AISuggestion = {
   additionalTips: string;
 };
 
-import { apiClient } from "@/utils/api";
-
 export default function AI() {
   const { user } = useAppAuth();
   const scrollViewRef = useRef<ScrollView>(null);
   const [dailyGoal, setDailyGoal] = useState("");
-  const [weight, setWeight] = useState("64");
+  const [weight, setWeight] = useState("");
   const [activityLevel, setActivityLevel] = useState<
     "low" | "moderate" | "high"
   >("moderate");
@@ -69,6 +56,28 @@ export default function AI() {
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState<AISuggestion | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let active = true;
+    getLocalProfile(user.id)
+      .then((profile) => {
+        if (!active) return;
+        setDailyGoal(profile.dailyGoalMl.toString());
+        if (profile.weightKg !== null) {
+          setWeight(profile.weightKg.toString());
+        }
+      })
+      .catch((loadError: unknown) => {
+        console.error("Error loading local goal inputs:", loadError);
+        Alert.alert("Error", "Unable to load your saved goal and weight.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   const generateSmartGoal = async () => {
     if (!dailyGoal) {
@@ -101,31 +110,25 @@ export default function AI() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setError(null);
     try {
-      const res = await apiClient.makeRequest("/api/ai/generate-goal", {
-        method: "POST",
-        body: JSON.stringify({
-          clerkUserId: user?.id || "",
-          weight: weightNum,
-          dailyGoal: dailyGoalNum,
-          activityLevel,
-        }),
+      const result = generateOfflineGoalSuggestion({
+        dailyGoalMl: dailyGoalNum,
+        weightKg: weightNum,
+        activityLevel,
       });
-
-      if (!res.success) {
-        throw new Error(res.message || "Failed to generate suggestion");
-      }
-
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setSuggestion(res.data);
+      setSuggestion(result);
       setShowSuggestion(true);
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 150);
-    } catch (err: any) {
-      const errorMessage = err?.message || "Network error. Please try again.";
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Unable to generate an offline suggestion.";
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setError(errorMessage);
-      console.error("API Error:", err);
+      console.error("Offline goal calculation failed:", err);
     } finally {
       setLoading(false);
     }
@@ -140,8 +143,6 @@ export default function AI() {
     setShowSuggestion(false);
     setSuggestion(null);
     setError(null);
-    setDailyGoal("");
-    setWeight("64");
     setActivityLevel("moderate");
   };
 
@@ -159,7 +160,7 @@ export default function AI() {
               Get Smart Goal
             </Text>
             <Text className="text-[#52525B] text-sm" font="fustat-medium">
-              Customize your daily intake target
+              Create a simple offline estimate from your details
             </Text>
           </View>
 
@@ -252,7 +253,6 @@ export default function AI() {
               </View>
             </View>
 
-            {/* Activity Level removed — not used. */}
           </View>
 
           {/* Error Banner */}
@@ -294,7 +294,7 @@ export default function AI() {
                 <>
                   <SparkleIcon width={24} height={24} />
                   <Text className="text-white text-base" font="fustat-semibold">
-                    Generate Smart Goal
+                    Generate Offline Goal
                   </Text>
                 </>
               )}
@@ -302,7 +302,7 @@ export default function AI() {
           </TouchableOpacity>
         </View>
 
-        {/* AI Suggestion Card */}
+        {/* Offline suggestion card */}
         {showSuggestion && suggestion && (
           <View className="gap-5 mt-6">
             <View className="bg-white border border-[#4893E5] rounded-2xl p-6">
@@ -312,7 +312,7 @@ export default function AI() {
                 </View>
                 <View className="flex-1 gap-1.5">
                   <Text className="text-[#27272A] text-base" font="fustat-bold">
-                    AI Suggestion Ready
+                    Offline Suggestion Ready
                   </Text>
                   <View className="gap-3.5">
                     <Text className="text-[#3F3F46] text-sm">

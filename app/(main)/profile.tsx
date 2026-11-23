@@ -12,20 +12,29 @@ import {
   TrashIcon,
 } from "@/components/SVGIcons";
 import Text from "@/components/Text";
-import { apiClient } from "@/utils/api";
 import { useAppAuth } from "@/utils/auth";
+import {
+  addLocalCup,
+  deleteLocalCup,
+  getLocalCups,
+  getLocalProfile,
+  getLocalWaterLogs,
+  updateLocalProfile,
+  type LocalCup,
+  type LocalProfile,
+} from "@/utils/localDatabase";
+import { buildStreakAchievements } from "@/utils/offlineLogic";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as Sharing from "expo-sharing";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Modal,
   RefreshControl,
   ScrollView,
-  Switch,
   TextInput,
   TouchableOpacity,
   View,
@@ -44,12 +53,7 @@ type Achievement = {
   date: string;
 };
 
-type Cup = {
-  id: number;
-  name: string;
-  volume: number;
-  unit: string;
-};
+type Cup = LocalCup;
 
 const getAchievementIcon = (title: string) => {
   if (title.includes("15")) {
@@ -61,140 +65,24 @@ const getAchievementIcon = (title: string) => {
   return <ThreeDayStreakIcon width={50} height={51} />;
 };
 
-const pickValue = <T,>(...values: Array<T | null | undefined>) =>
-  values.find((value) => value !== null && value !== undefined);
-
-const parseProfileDetails = (pData: any, user: any) => {
-  if (!pData) return null;
-  const profileData = pData?.profile || pData || {};
-  const generalData = pData?.general || pData || {};
-
-  const name =
-    pickValue(
-      profileData.name,
-      generalData.name,
-      pData?.name,
-      user?.fullName,
-      user?.firstName,
-    ) || "";
-
-  const gender = pickValue(
-    profileData.gender,
-    generalData.gender,
-    pData?.gender,
-  );
-
-  const parseNumber = (v: any): number | null => {
-    if (typeof v === "number") return v;
-    if (typeof v === "string") {
-      const n = parseFloat(v);
-      return Number.isFinite(n) ? n : null;
-    }
-    return null;
-  };
-
-  const weight =
-    parseNumber(profileData.weight) ??
-    parseNumber(generalData.weight) ??
-    parseNumber(pData?.weight);
-
-  const dailyGoal =
-    parseNumber(profileData.dailyGoal) ??
-    parseNumber(profileData.daily_goal_ml) ??
-    parseNumber(generalData.dailyGoal) ??
-    parseNumber(generalData.daily_goal_ml) ??
-    parseNumber(pData?.dailyGoal) ??
-    parseNumber(pData?.daily_goal_ml) ??
-    2000;
-
-  return { name, gender, weight, dailyGoal };
-};
-
-const parseProfileAchievements = (achievementsData: any): Achievement[] => {
-  const achievementData =
-    achievementsData?.achievements ||
-    achievementsData?.data ||
-    achievementsData ||
-    [];
-  const normalizedAchievements = Array.isArray(achievementData)
-    ? achievementData
-    : [];
-
-  const unlocked = normalizedAchievements.filter((item: any) =>
-    Boolean(item.completed ?? item.is_completed ?? item.unlocked ?? false),
-  );
-
-  return unlocked.map((item: any) => {
-    const rawUnlock =
-      item.unlock_date ||
-      item.unlocked_at ||
-      item.unlockDate ||
-      item.date ||
-      item.createdAt ||
-      "";
-    const formatted = rawUnlock
-      ? new Date(rawUnlock).toLocaleDateString()
-      : "";
-
-    return {
-      icon: getAchievementIcon(item.title || item.name || ""),
-      title: item.title || item.name || "Achievement",
-      date: formatted,
-    };
-  });
-};
-
-const DEFAULT_CUPS: Cup[] = [
-  { id: 1, name: "Glass", volume: 250, unit: "ml" },
-  { id: 2, name: "Bottle", volume: 500, unit: "ml" },
-];
-
-const parseProfileCups = (cupsData: any): Cup[] => {
-  const cupData = cupsData?.cups || cupsData?.data || cupsData || [];
-  const normalizedCups = Array.isArray(cupData) ? cupData : [];
-  if (normalizedCups.length === 0) {
-    return DEFAULT_CUPS;
-  }
-
-  return normalizedCups.map((item: any) => ({
-    id: Number(item.id),
-    name: item.name,
-    volume: Number(item.volume ?? item.amount ?? 0),
-    unit: item.unit || "ml",
-  }));
-};
-
 export default function Profile() {
   const { signOut, isLoaded: isUserLoaded, user } = useAppAuth();
   const achievementsCardRef = useRef<View>(null);
-  const loadedUserIdRef = useRef<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const clerkUserId = user?.id || "";
+  const clerkFirstName = user?.firstName;
+  const clerkFullName = user?.fullName;
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
 
-  // Synchronously peek at cache for instant 0ms render
-  const cachedProfile = clerkUserId
-    ? apiClient.getCachedData<any>(`/api/users/profile?clerkUserId=${encodeURIComponent(clerkUserId)}`)
-    : null;
-  const cachedAchievements = clerkUserId
-    ? apiClient.getCachedData<any>(`/api/users/achievements?clerkUserId=${encodeURIComponent(clerkUserId)}`)
-    : null;
-  const cachedCups = clerkUserId
-    ? apiClient.getCachedData<any>(`/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`)
-    : null;
-
-  const initialProfile = cachedProfile ? parseProfileDetails(cachedProfile, user) : null;
-  const hasCachedProfile = Boolean(initialProfile);
-
-  const [isLoadingProfile, setIsLoadingProfile] = useState(!hasCachedProfile);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileName, setProfileName] = useState(
-    () => initialProfile?.name || user?.fullName || user?.firstName || "",
+    () => user?.fullName || user?.firstName || "",
   );
-  const [gender, setGender] = useState(() => initialProfile?.gender ? String(initialProfile.gender) : "");
-  const [weight, setWeight] = useState<number | null>(() => initialProfile?.weight ?? null);
-  const [dailyGoal, setDailyGoal] = useState<number | null>(() => initialProfile?.dailyGoal ?? 2000);
-  // Units fixed: water in ml, weight in kg
+  const [gender, setGender] = useState("");
+  const [weight, setWeight] = useState<number | null>(null);
+  const [dailyGoal, setDailyGoal] = useState<number | null>(2000);
   const [showAddCupModal, setShowAddCupModal] = useState(false);
 
   // Edit profile modal states
@@ -206,228 +94,106 @@ export default function Profile() {
   // Input modal states
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showDailyGoalModal, setShowDailyGoalModal] = useState(false);
-  const [weightInput, setWeightInput] = useState(() =>
-    initialProfile?.weight !== null && initialProfile?.weight !== undefined
-      ? String(initialProfile.weight)
-      : "",
-  );
-  const [dailyGoalInput, setDailyGoalInput] = useState(() =>
-    initialProfile?.dailyGoal !== null && initialProfile?.dailyGoal !== undefined
-      ? String(initialProfile.dailyGoal)
-      : "2000",
-  );
-  const [achievements, setAchievements] = useState<Achievement[]>(() =>
-    cachedAchievements ? parseProfileAchievements(cachedAchievements) : [],
-  );
-  const [cups, setCups] = useState<Cup[]>(() =>
-    cachedCups ? parseProfileCups(cachedCups) : [],
-  );
+  const [weightInput, setWeightInput] = useState("");
+  const [dailyGoalInput, setDailyGoalInput] = useState("2000");
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [cups, setCups] = useState<Cup[]>([]);
 
-  const getClerkUserId = () => user?.id || "";
-
-  const loadProfileData = async (isRefresh = false) => {
-    const uid = getClerkUserId();
-    if (!uid) {
-      if (!isRefresh) setIsLoadingProfile(false);
+  const loadProfileData = useCallback(async () => {
+    if (!clerkUserId) {
+      setIsLoadingProfile(false);
       return;
     }
 
-    const isFirstLoadForUser = loadedUserIdRef.current !== uid;
-    if (!isRefresh && isFirstLoadForUser && !hasCachedProfile) {
+    if (loadedUserId !== clerkUserId) {
       setIsLoadingProfile(true);
+      setProfileName(clerkFullName || clerkFirstName || "");
+      setGender("");
+      setWeight(null);
+      setWeightInput("");
+      setDailyGoal(2000);
+      setDailyGoalInput("2000");
+      setAchievements([]);
+      setCups([]);
     }
 
     try {
-      const [profileRes, achievementsRes, cupsRes] = await Promise.all([
-        apiClient.makeRequest(
-          `/api/users/profile?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-          { forceRefresh: isRefresh },
-        ),
-        apiClient.makeRequest(
-          `/api/users/achievements?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-          { forceRefresh: isRefresh },
-        ),
-        apiClient.makeRequest(
-          `/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-          { forceRefresh: isRefresh },
-        ),
+      const [profile, localCups, logs] = await Promise.all([
+        getLocalProfile(clerkUserId),
+        getLocalCups(clerkUserId),
+        getLocalWaterLogs(clerkUserId),
       ]);
-
-      let pData = profileRes.data as any;
-
-      // If user profile is not found in backend DB, auto-initialize it
-      if (!profileRes.success || !pData) {
-        const initRes = await apiClient.makeRequest(
-          "/api/users/initialize-profile",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              clerkUserId,
-              email: user?.primaryEmailAddress?.emailAddress || "",
-              firstName: user?.firstName || "User",
-              lastName: user?.lastName || "",
-            }),
-          },
-        );
-        if (initRes.success && initRes.data) {
-          pData = initRes.data;
-        }
-      }
-
-      const profileData = pData?.profile || pData || {};
-      const generalData = pData?.general || pData || {};
-
-      const loadedName =
-        pickValue(
-          profileData.name,
-          generalData.name,
-          pData?.name,
-          user?.fullName,
-          user?.firstName,
-        ) || "";
-
-      const loadedGender = pickValue(
-        profileData.gender,
-        generalData.gender,
-        pData?.gender,
-      );
-
-      const parseNumber = (v: any): number | null => {
-        if (typeof v === "number") return v;
-        if (typeof v === "string") {
-          const n = parseFloat(v);
-          return Number.isFinite(n) ? n : null;
-        }
-        return null;
-      };
-
-      const loadedWeight =
-        parseNumber(profileData.weight) ??
-        parseNumber(generalData.weight) ??
-        parseNumber(pData?.weight);
-
-      const loadedDailyGoal =
-        parseNumber(profileData.dailyGoal) ??
-        parseNumber(profileData.daily_goal_ml) ??
-        parseNumber(generalData.dailyGoal) ??
-        parseNumber(generalData.daily_goal_ml) ??
-        parseNumber(pData?.dailyGoal) ??
-        parseNumber(pData?.daily_goal_ml) ??
-        2000;
-
-      // Parse achievements
-      let newAchievements: Achievement[] = [];
-      if (achievementsRes.success) {
-        const achievementData = (achievementsRes.data as any) || [];
-        const normalizedAchievements = Array.isArray(achievementData)
-          ? achievementData
-          : Array.isArray(achievementData.achievements)
-            ? achievementData.achievements
-            : Array.isArray(achievementData.data)
-              ? achievementData.data
-              : [];
-
-        const unlocked = normalizedAchievements.filter((item: any) =>
-          Boolean(
-            item.completed ?? item.is_completed ?? item.unlocked ?? false,
-          ),
-        );
-
-        newAchievements = unlocked.map((item: any) => {
-          const rawUnlock =
-            item.unlock_date ||
-            item.unlocked_at ||
-            item.unlockDate ||
-            item.date ||
-            item.createdAt ||
-            "";
-          const formatted = rawUnlock
-            ? new Date(rawUnlock).toLocaleDateString()
-            : "";
-
-          return {
-            icon: getAchievementIcon(item.title || item.name || ""),
-            title: item.title || item.name || "Achievement",
-            date: formatted,
-          };
-        });
-      }
-
-      // Parse cups
-      let newCups: Cup[] = [];
-      if (cupsRes.success) {
-        const cupData = (cupsRes.data as any) || [];
-        const normalizedCups = Array.isArray(cupData)
-          ? cupData
-          : Array.isArray(cupData.cups)
-            ? cupData.cups
-            : Array.isArray(cupData.data)
-              ? cupData.data
-              : [];
-
-        newCups = normalizedCups.map((item: any) => ({
-          id: Number(item.id),
-          name: item.name,
-          volume: Number(item.volume ?? item.amount ?? 0),
-          unit: item.unit || "ml",
+      const unlocked = buildStreakAchievements(logs, profile.dailyGoalMl)
+        .filter((achievement) => achievement.completed)
+        .map((achievement) => ({
+          icon: getAchievementIcon(achievement.title),
+          title: achievement.title,
+          date: achievement.unlockDate
+            ? new Date(`${achievement.unlockDate}T12:00:00`).toLocaleDateString()
+            : "",
         }));
-      }
 
-      // Batch all state updates atomically to eliminate flicker
-      setProfileName(loadedName);
-      if (loadedGender) setGender(String(loadedGender));
-      if (loadedWeight !== null) {
-        setWeight(loadedWeight);
-        setWeightInput(loadedWeight.toString());
-      }
-      setDailyGoal(loadedDailyGoal);
-      setDailyGoalInput(loadedDailyGoal.toString());
-      setAchievements(newAchievements);
-      setCups(newCups);
-      loadedUserIdRef.current = clerkUserId;
+      setProfileName(clerkFullName || clerkFirstName || "");
+      setGender(profile.gender ?? "");
+      setWeight(profile.weightKg);
+      setWeightInput(profile.weightKg?.toString() ?? "");
+      setDailyGoal(profile.dailyGoalMl);
+      setDailyGoalInput(profile.dailyGoalMl.toString());
+      setAchievements(unlocked);
+      setCups(localCups);
+      setLoadedUserId(clerkUserId);
     } catch (error) {
-      console.error("Error loading profile data:", error);
+      console.error("Error loading local profile data:", error);
+      Alert.alert("Error", "Unable to load your profile from this device.");
     } finally {
       setIsLoadingProfile(false);
+      setIsRefreshing(false);
     }
-  };
+  }, [
+    clerkUserId,
+    clerkFirstName,
+    clerkFullName,
+    loadedUserId,
+  ]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isUserLoaded) void loadProfileData();
+    }, [isUserLoaded, loadProfileData]),
+  );
 
   const handleGenderSelect = (value: string) => {
-    setGender(value);
-    saveProfileData({ gender: value });
+    void saveProfileData({ gender: value }).then((saved) => {
+      if (saved) setGender(value);
+    });
   };
 
-  useEffect(() => {
-    if (isUserLoaded && user?.id) {
-      if (loadedUserIdRef.current !== user.id) {
-        loadProfileData();
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isUserLoaded, user?.id]);
-
-  const saveProfileData = async (overrides?: Partial<Record<string, any>>) => {
-    const clerkUserId = getClerkUserId();
-    if (!clerkUserId) return;
+  const saveProfileData = async (
+    overrides?: Partial<LocalProfile>,
+  ): Promise<boolean> => {
+    if (!clerkUserId) return false;
 
     setIsSavingProfile(true);
-    const payload = {
-      clerkUserId,
-      name: profileName,
-      gender,
-      weight,
-      dailyGoal,
-      ...(overrides || {}),
+    const updatedProfile: LocalProfile = {
+      gender:
+        overrides?.gender !== undefined ? overrides.gender : gender || null,
+      weightKg:
+        overrides?.weightKg !== undefined ? overrides.weightKg : weight,
+      dailyGoalMl:
+        overrides?.dailyGoalMl !== undefined
+          ? overrides.dailyGoalMl
+          : dailyGoal ?? 2000,
     };
 
-    const res = await apiClient.makeRequest("/api/users/profile", {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    });
-
-    setIsSavingProfile(false);
-    if (!res.success) {
-      Alert.alert("Error", res.message || "Failed to save profile.");
+    try {
+      await updateLocalProfile(clerkUserId, updatedProfile);
+      return true;
+    } catch (error) {
+      console.error("Error saving local profile:", error);
+      Alert.alert("Error", "Unable to save your profile on this device.");
+      return false;
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -441,21 +207,29 @@ export default function Profile() {
 
   // unit and activity options removed (units fixed)
 
-  const handleWeightSave = () => {
-    const value = parseInt(weightInput);
-    if (!isNaN(value) && value > 0) {
+  const handleWeightSave = async () => {
+    const value = Number(weightInput);
+    if (!Number.isFinite(value) || value <= 0) {
+      Alert.alert("Error", "Please enter a valid weight.");
+      return;
+    }
+
+    if (await saveProfileData({ weightKg: value })) {
       setWeight(value);
       setShowWeightModal(false);
-      saveProfileData({ weight: value });
     }
   };
 
-  const handleDailyGoalSave = () => {
-    const value = parseInt(dailyGoalInput);
-    if (!isNaN(value) && value > 0) {
+  const handleDailyGoalSave = async () => {
+    const value = Number(dailyGoalInput);
+    if (!Number.isInteger(value) || value <= 0) {
+      Alert.alert("Error", "Please enter a positive whole-number goal.");
+      return;
+    }
+
+    if (await saveProfileData({ dailyGoalMl: value })) {
       setDailyGoal(value);
       setShowDailyGoalModal(false);
-      saveProfileData({ dailyGoal: value });
     }
   };
 
@@ -572,40 +346,25 @@ export default function Profile() {
       return;
     }
 
-    const clerkUserId = getClerkUserId();
-    if (!clerkUserId) return;
+    if (!user?.update) {
+      Alert.alert("Error", "Your Clerk profile is not available.");
+      return;
+    }
 
     setIsSavingProfile(true);
-    const payload = {
-      clerkUserId,
-      name: editName,
-    };
-
-    const res = await apiClient.makeRequest("/api/users/profile", {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    });
-
-    setIsSavingProfile(false);
-    if (res.success) {
-      setProfileName(editName);
-      try {
-        const parts = editName.trim().split(/\s+/);
-        const fName = parts[0] || "";
-        const lName = parts.length > 1 ? parts.slice(1).join(" ") : "";
-        if (user?.update) {
-          await user.update({
-            firstName: fName,
-            lastName: lName,
-          });
-        }
-      } catch (err) {
-        console.warn("Could not sync name to Clerk:", err);
-      }
+    try {
+      const parts = editName.trim().split(/\s+/);
+      const firstName = parts[0] || "";
+      const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+      await user.update({ firstName, lastName });
+      setProfileName(editName.trim());
       setShowEditProfileModal(false);
       Alert.alert("Success", "Profile updated successfully!");
-    } else {
-      Alert.alert("Error", res.message || "Failed to update profile.");
+    } catch (error) {
+      console.error("Error updating Clerk profile name:", error);
+      Alert.alert("Error", "Unable to update your name in Clerk.");
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -632,20 +391,19 @@ export default function Profile() {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          const clerkUserId = getClerkUserId();
           if (!clerkUserId) return;
 
-          const res = await apiClient.makeRequest(`/api/users/cups/${cup.id}`, {
-            method: "DELETE",
-            body: JSON.stringify({ clerkUserId }),
-          });
-
-          if (res.success) {
+          try {
+            const deleted = await deleteLocalCup(clerkUserId, cup.id);
+            if (!deleted) {
+              Alert.alert("Error", "This cup could not be found.");
+              return;
+            }
             setCups((prev) => prev.filter((item) => item.id !== cup.id));
-            return;
+          } catch (error) {
+            console.error("Error deleting local cup:", error);
+            Alert.alert("Error", "Unable to delete this cup from your device.");
           }
-
-          Alert.alert("Error", res.message || "Failed to delete cup.");
         },
       },
     ]);
@@ -656,7 +414,6 @@ export default function Profile() {
   };
 
   const handleCreateCup = async (description: string, amount: string) => {
-    const clerkUserId = getClerkUserId();
     if (!clerkUserId) {
       Alert.alert("Error", "User not authenticated.");
       return;
@@ -670,31 +427,14 @@ export default function Profile() {
 
     const cupName = description.trim() || `Cup ${cups.length + 1}`;
 
-    const newCupPayload = {
-      clerkUserId,
-      name: cupName,
-      volume,
-      unit: "ml",
-    };
-
-    const res = await apiClient.makeRequest("/api/users/cups", {
-      method: "POST",
-      body: JSON.stringify(newCupPayload),
-    });
-
-    if (res.success && res.data) {
-      const createdCup = res.data as Cup;
-      const updatedCups = [...cups, createdCup];
-      setCups(updatedCups);
-      apiClient.setCachedData(
-        `/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-        updatedCups,
-      );
+    try {
+      const createdCup = await addLocalCup(clerkUserId, cupName, volume);
+      setCups((currentCups) => [...currentCups, createdCup]);
       setShowAddCupModal(false);
-      return;
+    } catch (error) {
+      console.error("Error adding local cup:", error);
+      Alert.alert("Error", "Unable to save this cup on your device.");
     }
-
-    Alert.alert("Error", res.message || "Failed to add cup.");
   };
 
   const handleLogout = () => {
@@ -706,7 +446,6 @@ export default function Profile() {
         onPress: async () => {
           try {
             setIsLoggingOut(true);
-            apiClient.clearCache();
             await signOut();
             router.replace("/login");
           } catch (error) {
@@ -721,11 +460,10 @@ export default function Profile() {
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await loadProfileData(true);
-    setIsRefreshing(false);
-  }, [user?.id]);
+    await loadProfileData();
+  }, [loadProfileData]);
 
-  if (isLoadingProfile && !hasCachedProfile && !profileName) {
+  if (isLoadingProfile && loadedUserId !== clerkUserId) {
     return (
       <View className="flex-1 bg-[#FAFAFA] justify-center items-center">
         <ActivityIndicator size="large" color="#0090C8" />

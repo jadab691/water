@@ -54,11 +54,18 @@
       "expo-web-browser",
       "expo-image",
       "expo-sharing",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9e2da298-044e-465b-b25d-798294ebe361"
+      }
     }
   }
 }

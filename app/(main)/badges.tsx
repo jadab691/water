@@ -8,12 +8,20 @@ import {
   ThreeDayStreakIcon,
 } from "@/components/SVGIcons";
 import Text from "@/components/Text";
-import { apiClient } from "@/utils/api";
 import { useAppAuth } from "@/utils/auth";
+import {
+  getLocalProfile,
+  getLocalWaterLogs,
+} from "@/utils/localDatabase";
+import {
+  buildStreakAchievements,
+  type StreakAchievement,
+} from "@/utils/offlineLogic";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   TouchableOpacity,
@@ -43,33 +51,6 @@ type BadgeState = BadgeDefinition & {
   statusText?: string;
   completed: boolean;
   unlockDate?: string;
-};
-
-type BadgeApiItem = {
-  badgeId?: string;
-  badge_id?: string;
-  id?: string;
-  code?: string;
-  title?: string;
-  name?: string;
-  status?: string;
-  completed?: boolean;
-  is_completed?: boolean;
-  unlocked?: boolean;
-  progress?: number;
-  current?: number;
-  streak?: number;
-  value?: number;
-  total?: number;
-  target?: number;
-  goal?: number;
-  requirement?: number;
-  unlockDate?: string;
-  unlock_date?: string;
-  unlocked_at?: string;
-  date?: string;
-  // numeric id if backend returns number-based badge id
-  badgeNum?: number;
 };
 
 const badgeCatalog: BadgeDefinition[] = [
@@ -110,42 +91,6 @@ const badgeCatalog: BadgeDefinition[] = [
     icon: <NinetyDayStreakIcon />,
   },
 ];
-
-// Map numeric badge IDs (1-6) to their specific icons for quick lookup
-const badgeIconMap: Record<number, React.ReactNode> = {
-  1: <ThreeDayStreakIcon />,
-  2: <SevenDayStreakIcon />,
-  3: <FifteenDayStreakIcon />,
-  4: <ThirtyDayStreakIcon />,
-  5: <SixtyDayStreakIcon />,
-  6: <NinetyDayStreakIcon />,
-};
-
-const toNumber = (value: unknown): number => {
-  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-};
-
-const getBadgeIcon = (badgeId: string, title: string): React.ReactNode => {
-  // prefer numeric mapping when the backend provides a numeric id
-  const parsed = Number(badgeId);
-  if (Number.isFinite(parsed) && badgeIconMap[parsed])
-    return badgeIconMap[parsed];
-
-  const normalizedId = String(badgeId || title).toLowerCase();
-  if (normalizedId.includes("3")) return <ThreeDayStreakIcon />;
-  if (normalizedId.includes("7")) return <SevenDayStreakIcon />;
-  if (normalizedId.includes("15")) return <FifteenDayStreakIcon />;
-  if (normalizedId.includes("30")) return <ThirtyDayStreakIcon />;
-  if (normalizedId.includes("60")) return <SixtyDayStreakIcon />;
-  if (normalizedId.includes("90")) return <NinetyDayStreakIcon />;
-
-  return <ThreeDayStreakIcon />;
-};
 
 const BadgeCard = ({
   title,
@@ -243,123 +188,55 @@ const buildDefaultBadges = (): BadgeState[] => {
   }));
 };
 
-const normalizeAchievements = (data: any): BadgeApiItem[] => {
-  const items = Array.isArray(data?.achievements)
-    ? data.achievements
-    : Array.isArray(data?.data)
-      ? data.data
-      : Array.isArray(data)
-        ? data
-        : [];
-
-  return items.map((item: BadgeApiItem) => ({
-    badgeId: String(
-      item.badgeId || item.badge_id || item.id || item.code || "",
-    ),
-    badgeNum: toNumber(
-      item.badge_id ?? item.badgeId ?? item.id ?? item.code ?? 0,
-    ),
-    title: String(item.title || item.name || "Achievement"),
-    status: item.status ? String(item.status) : "",
-    completed: Boolean(
-      item.completed ?? item.is_completed ?? item.unlocked ?? false,
-    ),
-    progress: toNumber(
-      item.progress ??
-        item.current ??
-        item.streak ??
-        item.value ??
-        item.total ??
-        0,
-    ),
-    target: toNumber(item.target ?? item.goal ?? item.requirement ?? 0),
-    unlockDate: String(
-      item.unlockDate ||
-        item.unlock_date ||
-        item.unlocked_at ||
-        item.date ||
-        "",
-    ),
-  }));
-};
-
-const buildBadgesFromApi = (data: any): BadgeState[] => {
-  const normalized = normalizeAchievements(data);
-  if (!normalized.length) return buildDefaultBadges();
-
-  return normalized.map((item) => {
-    const title = item.title || "Achievement";
-    const completed = Boolean(item.completed);
-    const target = item.target || 0;
-    const progress = item.progress || 0;
-    const progressText = completed
-      ? undefined
-      : target
-        ? `${progress}/${target}`
-        : undefined;
-    const rawStatus = item.status
-      ? item.status
-      : completed
-        ? "Completed"
-        : "In progress";
-    const statusText =
-      rawStatus === progressText || rawStatus === "In progress"
-        ? undefined
-        : rawStatus;
-    const badgeNumber = item.badgeNum || toNumber(item.badgeId || "0");
-    const badgeId = item.badgeId || title.toLowerCase();
-    const rawUnlock = item.unlockDate || undefined;
-    const unlockDate = rawUnlock
-      ? new Date(rawUnlock).toLocaleDateString()
-      : undefined;
-    const icon = badgeIconMap[badgeNumber] ?? getBadgeIcon(badgeId, title);
+const buildBadges = (achievements: StreakAchievement[]): BadgeState[] =>
+  badgeCatalog.map((badge) => {
+    const progress = achievements.find(
+      (achievement) => achievement.badgeId === badge.badgeId,
+    );
+    const completed = progress?.completed ?? false;
+    const unlockDate = progress?.unlockDate;
 
     return {
-      title,
-      badgeId,
-      target,
-      icon,
+      ...badge,
       completed,
-      progressText,
-      statusText,
-      unlockDate,
+      progressText: completed
+        ? undefined
+        : `${progress?.progress ?? 0}/${badge.target}`,
+      statusText: completed ? "Completed" : undefined,
+      unlockDate: unlockDate
+        ? new Date(`${unlockDate}T12:00:00`).toLocaleDateString()
+        : undefined,
     };
   });
-};
 
 export default function Badges() {
   const { user } = useAppAuth();
   const clerkUserId = user?.id || "";
   const { width } = useWindowDimensions();
 
-  // Synchronously peek at cache for instant 0ms mount
-  const cachedAchievements = clerkUserId
-    ? apiClient.getCachedData<any>(`/api/users/achievements?clerkUserId=${encodeURIComponent(clerkUserId)}`)
-    : null;
-
   const [badges, setBadges] = useState<BadgeState[]>(() =>
-    cachedAchievements ? buildBadgesFromApi(cachedAchievements) : buildDefaultBadges(),
+    buildDefaultBadges(),
   );
-  const [isLoading, setIsLoading] = useState(!cachedAchievements);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadBadges = useCallback(async (forceRefresh = false) => {
+  const loadBadges = useCallback(async () => {
     if (!clerkUserId) {
       setIsLoading(false);
       return;
     }
 
     try {
-      const res = await apiClient.makeRequest(
-        `/api/users/achievements?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-        { forceRefresh },
+      const [profile, logs] = await Promise.all([
+        getLocalProfile(clerkUserId),
+        getLocalWaterLogs(clerkUserId),
+      ]);
+      setBadges(
+        buildBadges(buildStreakAchievements(logs, profile.dailyGoalMl)),
       );
-
-      if (res.success && res.data) {
-        setBadges(buildBadgesFromApi(res.data));
-      }
     } catch (error) {
       console.error("Error loading achievements:", error);
+      Alert.alert("Error", "Unable to calculate your local achievements.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -368,13 +245,13 @@ export default function Badges() {
 
   useFocusEffect(
     useCallback(() => {
-      loadBadges(false);
+      loadBadges();
     }, [loadBadges]),
   );
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await loadBadges(true);
+    await loadBadges();
   }, [loadBadges]);
 
   const badgeRows = useMemo(() => {

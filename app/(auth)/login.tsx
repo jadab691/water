@@ -6,7 +6,6 @@ import { Link, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAppAuth, REVIEWER_CREDENTIALS } from "@/utils/auth";
 
 type VerificationMethod =
   | "email_code"
@@ -33,7 +32,6 @@ type ClerkLikeError = {
 };
 
 const Login = () => {
-  const { loginAsReviewer } = useAppAuth();
   const { signIn } = useSignIn();
   const { isSignedIn, isLoaded } = useAuth({
     treatPendingAsSignedOut: false,
@@ -285,36 +283,6 @@ const Login = () => {
       setGeneralError("Please enter email and password.");
       setIsLoading(false);
       return;
-    }
-
-    const inputIdentifier = formState.email.trim().toLowerCase();
-    const inputPassword = formState.password.trim();
-
-    const isReviewerAccount =
-      inputIdentifier === REVIEWER_CREDENTIALS.email.toLowerCase() ||
-      inputIdentifier === REVIEWER_CREDENTIALS.alternativeUsername.toLowerCase() ||
-      inputIdentifier === "reviewer" ||
-      inputIdentifier === "reviewer@smarthydrate.com" ||
-      inputIdentifier === "user_google_reviewer";
-
-    if (isReviewerAccount) {
-      if (inputPassword === REVIEWER_CREDENTIALS.password) {
-        try {
-          await loginAsReviewer();
-          router.replace("/home");
-          return;
-        } catch (err) {
-          console.error("Reviewer login error:", err);
-          setGeneralError("Failed to initialize reviewer session. Please try again.");
-          return;
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setGeneralError("Invalid password for reviewer account (Check capitalization and '!' symbol).");
-        setIsLoading(false);
-        return;
-      }
     }
 
     try {
@@ -692,7 +660,7 @@ const Login = () => {
               href="/signup"
               className="text-center text-base text-[#71717a] px-5"
             >
-              Don't have account?{" "}
+              Don&apos;t have account?{" "}
               <Text className="font-bold text-[#0090C8]">Sign Up</Text>
             </Link>
           )}

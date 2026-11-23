@@ -1,7 +1,6 @@
 import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 
-import { useAuth } from "@clerk/expo";
 import { FredokaOne_400Regular } from "@expo-google-fonts/fredoka-one";
 import {
     Fustat_300Light,
@@ -15,10 +14,15 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { ActivityIndicator, View } from "react-native";
+import {
+    ActivityIndicator,
+    Platform,
+    Text as NativeText,
+    View,
+} from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { CLERK_PUBLISHABLE_KEY } from "@/utils/constants";
-import { AuthProvider } from "@/utils/auth";
+import { AuthProvider, useAppAuth } from "@/utils/auth";
 import "./global.css";
 
 SplashScreen.preventAutoHideAsync();
@@ -36,7 +40,7 @@ function RootLayoutContent() {
     Fustat_800ExtraBold,
   });
 
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isLoaded } = useAppAuth();
 
   useEffect(() => {
     if (loaded || error) {
@@ -68,6 +72,17 @@ function RootLayoutContent() {
 }
 
 export default function RootLayout() {
+  if (Platform.OS === "web") {
+    return (
+      <View className="flex-1 bg-[#FAFAFA] justify-center items-center px-8">
+        <NativeText className="text-center text-[#27272A]">
+          Smart Hydrate is an Android app. Open it in Expo Go on your Android
+          device.
+        </NativeText>
+      </View>
+    );
+  }
+
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <SafeAreaProvider>

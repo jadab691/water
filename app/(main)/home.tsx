@@ -5,8 +5,20 @@ import CustomAmountModal from "@/components/CustomAmountModal";
 import Quickadd from "@/components/Quickadd";
 import Text from "@/components/Text";
 import WaterWaveCircle from "@/components/WaterWaveCircle";
-import { apiClient } from "@/utils/api";
 import { useAppAuth } from "@/utils/auth";
+import {
+  addLocalWaterLog,
+  deleteLocalWaterLog,
+  getLocalCups,
+  getLocalProfile,
+  getTodayWaterLogs,
+  type LocalCup,
+} from "@/utils/localDatabase";
+import {
+  calculateDailyStats,
+  type DailyStats,
+  type WaterLogRecord,
+} from "@/utils/offlineLogic";
 import Entypo from "@expo/vector-icons/Entypo";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,132 +36,27 @@ import {
   View,
 } from "react-native";
 
-type Cup = {
-  id: number;
-  name: string;
-  volume: number;
-  unit: string;
-};
-
-type WaterLog = {
-  id: number;
-  amount_ml: number;
-  logged_at: string;
-  notes: string;
-};
-
-type DailyStats = {
-  total_ml: number;
-  goal_met: boolean;
-  log_count: number;
-};
-
-export const DEFAULT_CUPS: Cup[] = [
-  { id: 1, name: "Glass", volume: 250, unit: "ml" },
-  { id: 2, name: "Bottle", volume: 500, unit: "ml" },
-];
-
-const normalizeCups = (cupData: any): Cup[] => {
-  const list = Array.isArray(cupData)
-    ? cupData
-    : Array.isArray(cupData?.cups)
-      ? cupData.cups
-      : Array.isArray(cupData?.data)
-        ? cupData.data
-        : [];
-  if (list.length === 0) {
-    return DEFAULT_CUPS;
-  }
-  return list.map((item: any) => ({
-    id: Number(item.id),
-    name: item.name,
-    volume: Number(item.volume ?? item.amount ?? 0),
-    unit: item.unit || "ml",
-  }));
-};
-
-const normalizeDailyStats = (data: any): DailyStats => {
-  if (!data) return { total_ml: 0, goal_met: false, log_count: 0 };
-  const d = data.data || data;
-  return {
-    total_ml: Number(d.total_ml ?? 0),
-    goal_met: Boolean(d.goal_met ?? false),
-    log_count: Number(d.log_count ?? 0),
-  };
-};
-
-const normalizeWaterLogs = (logData: any): WaterLog[] => {
-  const list = Array.isArray(logData)
-    ? logData
-    : Array.isArray(logData?.logs)
-      ? logData.logs
-      : Array.isArray(logData?.data)
-        ? logData.data
-        : [];
-  return list
-    .map((item: any) => ({
-      id: Number(item.id),
-      amount_ml: Number(item.amount_ml ?? item.amount ?? 0),
-      logged_at: item.logged_at ?? new Date().toISOString(),
-      notes: item.notes ?? "",
-    }))
-    .sort(
-      (a: WaterLog, b: WaterLog) =>
-        new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime(),
-    );
-};
-
-const parseDailyGoal = (pData: any): number => {
-  if (!pData) return 2000;
-  const profileData = pData.profile || pData;
-  const settingsData = pData.settings || pData;
-  const goal = profileData.daily_goal_ml ?? settingsData.daily_goal_ml ?? 2000;
-  return typeof goal === "string" ? parseInt(goal, 10) : Number(goal) || 2000;
-};
+type Cup = LocalCup;
+type WaterLog = WaterLogRecord;
 
 const Home = () => {
   const { user } = useAppAuth();
   const router = useRouter();
   const clerkUserId = user?.id || "";
 
-  // Synchronously peek at cache so state can render immediately on mount (0ms)
-  const cachedProfile = clerkUserId
-    ? apiClient.getCachedData<any>(`/api/users/profile?clerkUserId=${encodeURIComponent(clerkUserId)}`)
-    : null;
-  const cachedCups = clerkUserId
-    ? apiClient.getCachedData<any>(`/api/users/cups?clerkUserId=${encodeURIComponent(clerkUserId)}`)
-    : null;
-  const cachedStats = clerkUserId
-    ? apiClient.getCachedData<any>(`/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`)
-    : null;
-  const cachedLogs = clerkUserId
-    ? apiClient.getCachedData<any>(`/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`)
-    : null;
-
-  const hasCachedData = Boolean(cachedCups || cachedStats || cachedLogs || cachedProfile);
-
   const [modalVisible, setModalVisible] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const prevPercentageRef = useRef<number | null>(null);
-  const [isLoading, setIsLoading] = useState(!hasCachedData);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [cups, setCups] = useState<Cup[]>(() => (cachedCups ? normalizeCups(cachedCups) : []));
-  const [waterLogs, setWaterLogs] = useState<WaterLog[]>(() => (cachedLogs ? normalizeWaterLogs(cachedLogs) : []));
-  const [dailyStats, setDailyStats] = useState<DailyStats>(() =>
-    cachedStats
-      ? normalizeDailyStats(cachedStats)
-      : {
-          total_ml: 0,
-          goal_met: false,
-          log_count: 0,
-        },
-  );
-  const [dailyGoal, setDailyGoal] = useState<number>(() =>
-    cachedProfile ? parseDailyGoal(cachedProfile) : 2000,
-  );
-  // Unit fixed to ml
-
-  const getClerkUserId = () => user?.id || "";
+  const [cups, setCups] = useState<Cup[]>([]);
+  const [waterLogs, setWaterLogs] = useState<WaterLog[]>([]);
+  const [dailyStats, setDailyStats] = useState<DailyStats>({
+    total_ml: 0,
+    goal_met: false,
+    log_count: 0,
+  });
+  const [dailyGoal, setDailyGoal] = useState(2000);
 
   const formatTime = (isoString: string): string => {
     try {
@@ -179,81 +86,30 @@ const Home = () => {
     return Math.min(Math.round((dailyStats.total_ml / dailyGoal) * 100), 100);
   };
 
-  const loadHomeData = useCallback(async (forceRefresh = false) => {
-    const uid = getClerkUserId();
-    if (!uid) {
+  const loadHomeData = useCallback(async () => {
+    if (!clerkUserId) {
       setIsLoading(false);
       return;
     }
 
     try {
-      // Load profile to get daily goal and units
-      const profileRes = await apiClient.makeRequest(
-        `/api/users/profile?clerkUserId=${encodeURIComponent(uid)}`,
-        { forceRefresh },
-      );
-
-      let pData = profileRes.data as any;
-
-      if (!profileRes.success || !pData) {
-        const initRes = await apiClient.makeRequest(
-          "/api/users/initialize-profile",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              clerkUserId: uid,
-              email: user?.primaryEmailAddress?.emailAddress || "",
-              firstName: user?.firstName || "User",
-              lastName: user?.lastName || "",
-            }),
-          },
-        );
-        if (initRes.success && initRes.data) {
-          pData = initRes.data;
-        }
-      }
-
-      if (pData) {
-        setDailyGoal(parseDailyGoal(pData));
-      }
-
-      // Load cups, daily stats, and water logs in parallel
-      const [cupsRes, statsRes, logsRes] = await Promise.all([
-        apiClient.makeRequest(
-          `/api/users/cups?clerkUserId=${encodeURIComponent(uid)}`,
-          { forceRefresh },
-        ),
-        apiClient.makeRequest(
-          `/api/users/daily-stats?clerkUserId=${encodeURIComponent(uid)}`,
-          { forceRefresh },
-        ),
-        apiClient.makeRequest(
-          `/api/users/water-logs?clerkUserId=${encodeURIComponent(uid)}`,
-          { forceRefresh },
-        ),
+      const [profile, localCups, logs] = await Promise.all([
+        getLocalProfile(clerkUserId),
+        getLocalCups(clerkUserId),
+        getTodayWaterLogs(clerkUserId),
       ]);
-
-      // Process cups
-      if (cupsRes.success) {
-        setCups(normalizeCups(cupsRes.data));
-      }
-
-      // Process daily stats
-      if (statsRes.success) {
-        setDailyStats(normalizeDailyStats(statsRes.data));
-      }
-
-      // Process water logs
-      if (logsRes.success) {
-        setWaterLogs(normalizeWaterLogs(logsRes.data));
-      }
+      setDailyGoal(profile.dailyGoalMl);
+      setCups(localCups);
+      setWaterLogs(logs);
+      setDailyStats(calculateDailyStats(logs, profile.dailyGoalMl));
     } catch (error) {
       console.error("Error loading home data:", error);
+      Alert.alert("Error", "Unable to load your local hydration data.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [user?.id]);
+  }, [clerkUserId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -261,109 +117,33 @@ const Home = () => {
     }, [loadHomeData]),
   );
 
-  const logWaterOptimistically = async (amount: number, note: string) => {
-    const clerkUserId = getClerkUserId();
+  const logWater = async (amount: number, note: string) => {
     if (!clerkUserId) {
       Alert.alert("Error", "User not authenticated.");
       return;
     }
 
-    // 1. Snapshot previous state for rollback if network fails
-    const prevStats = dailyStats;
-    const prevLogs = waterLogs;
-
-    // 2. Trigger instant haptic feedback
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
-
-    // 3. Immediately update UI state (0ms latency!)
-    const tempId = Date.now();
-    const optimisticLog: WaterLog = {
-      id: tempId,
-      amount_ml: amount,
-      logged_at: new Date().toISOString(),
-      notes: note,
-    };
-
-    const wasAlreadyMet = prevStats.total_ml >= dailyGoal;
-    const isNowMet = (prevStats.total_ml + amount) >= dailyGoal;
-    if (!wasAlreadyMet && isNowMet) {
-      setShowConfetti(true);
-    }
-
-    const newStats: DailyStats = {
-      total_ml: prevStats.total_ml + amount,
-      goal_met: isNowMet,
-      log_count: prevStats.log_count + 1,
-    };
-    const newLogs = [optimisticLog, ...prevLogs];
-
-    setDailyStats(newStats);
-    setWaterLogs(newLogs);
-
-    // Keep cache instantly synchronized across tab navigations
-    apiClient.setCachedData(
-      `/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-      newStats,
-    );
-    apiClient.setCachedData(
-      `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-      newLogs,
-    );
-
-    // 4. Send network request in the background
-    try {
-      const payload = {
-        clerkUserId,
-        amount_ml: amount,
-        notes: note,
-      };
-
-      const res = await apiClient.makeRequest("/api/users/water-logs", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.success) {
-        // Rollback on failure
-        setDailyStats(prevStats);
-        setWaterLogs(prevLogs);
-        apiClient.setCachedData(
-          `/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-          prevStats,
-        );
-        apiClient.setCachedData(
-          `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-          prevLogs,
-        );
-        Alert.alert("Error", res.message || "Failed to log water intake.");
-        return;
-      }
-
-      // If backend returned the created log with real ID, update the temp log ID
-      if (res.data && (res.data as any).id) {
-        const realId = Number((res.data as any).id);
-        setWaterLogs((prev) => {
-          const updated = prev.map((l) => (l.id === tempId ? { ...l, id: realId } : l));
-          apiClient.setCachedData(
-            `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-            updated,
-          );
-          return updated;
-        });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch((error) =>
+        console.warn("Water-log haptic feedback failed:", error),
+      );
+      const previousTotal = dailyStats.total_ml;
+      await addLocalWaterLog(clerkUserId, amount, note);
+      const logs = await getTodayWaterLogs(clerkUserId);
+      const stats = calculateDailyStats(logs, dailyGoal);
+      setWaterLogs(logs);
+      setDailyStats(stats);
+      if (previousTotal < dailyGoal && stats.total_ml >= dailyGoal) {
+        setShowConfetti(true);
       }
     } catch (error) {
       console.error("Error logging water:", error);
-      // Rollback on error
-      setDailyStats(prevStats);
-      setWaterLogs(prevLogs);
-      Alert.alert("Error", "Failed to log water intake. Please check your connection.");
+      Alert.alert("Error", "Unable to save this water log on your device.");
     }
   };
 
   const handleAddWaterFromCup = (cup: Cup) => {
-    logWaterOptimistically(cup.volume, `Added from ${cup.name}`);
+    void logWater(cup.volume, `Added from ${cup.name}`);
   };
 
   const handleAddCustomWater = (amount: string, note?: string) => {
@@ -373,7 +153,7 @@ const Home = () => {
       return;
     }
     setModalVisible(false);
-    logWaterOptimistically(volume, note ?? "");
+    void logWater(volume, note ?? "");
   };
 
   const handleDeleteLog = (log: WaterLog) => {
@@ -385,86 +165,39 @@ const Home = () => {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => deleteWaterLogOptimistically(log),
+          onPress: () => deleteWaterLog(log),
         },
       ],
     );
   };
 
-  const deleteWaterLogOptimistically = async (log: WaterLog) => {
-    const clerkUserId = getClerkUserId();
+  const deleteWaterLog = async (log: WaterLog) => {
     if (!clerkUserId) {
       Alert.alert("Error", "User not authenticated.");
       return;
     }
 
-    // 1. Snapshot previous state for rollback
-    const prevStats = dailyStats;
-    const prevLogs = waterLogs;
-
-    // 2. Trigger instant haptic feedback
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch {}
-
-    // 3. Immediately update UI state (0ms latency!)
-    const newTotal = Math.max(0, prevStats.total_ml - log.amount_ml);
-    const newStats: DailyStats = {
-      total_ml: newTotal,
-      goal_met: newTotal >= dailyGoal,
-      log_count: Math.max(0, prevStats.log_count - 1),
-    };
-    const newLogs = prevLogs.filter((l) => l.id !== log.id);
-
-    setDailyStats(newStats);
-    setWaterLogs(newLogs);
-
-    // Keep cache synchronized across tabs
-    apiClient.setCachedData(
-      `/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-      newStats,
-    );
-    apiClient.setCachedData(
-      `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-      newLogs,
-    );
-
-    // 4. Send network request in the background
-    try {
-      const res = await apiClient.makeRequest(`/api/users/water-logs/${log.id}`, {
-        method: "DELETE",
-        body: JSON.stringify({ clerkUserId }),
-      });
-
-      if (!res.success) {
-        // Rollback on failure
-        setDailyStats(prevStats);
-        setWaterLogs(prevLogs);
-        apiClient.setCachedData(
-          `/api/users/daily-stats?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-          prevStats,
-        );
-        apiClient.setCachedData(
-          `/api/users/water-logs?clerkUserId=${encodeURIComponent(clerkUserId)}`,
-          prevLogs,
-        );
-        Alert.alert("Error", res.message || "Failed to delete water log.");
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch((error) =>
+        console.warn("Water-log haptic feedback failed:", error),
+      );
+      const deleted = await deleteLocalWaterLog(clerkUserId, log.id);
+      if (!deleted) {
+        Alert.alert("Error", "This water log could not be found.");
+        return;
       }
+      const logs = await getTodayWaterLogs(clerkUserId);
+      setWaterLogs(logs);
+      setDailyStats(calculateDailyStats(logs, dailyGoal));
     } catch (error) {
       console.error("Error deleting water log:", error);
-      // Rollback on error
-      setDailyStats(prevStats);
-      setWaterLogs(prevLogs);
-      Alert.alert(
-        "Error",
-        "Failed to delete water log. Please check your connection.",
-      );
+      Alert.alert("Error", "Unable to delete this water log from your device.");
     }
   };
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await loadHomeData(true);
+    await loadHomeData();
   }, [loadHomeData]);
 
   const hydrationPercentage = calculateHydrationPercentage();
@@ -633,7 +366,7 @@ const Home = () => {
 
         <View className="self-stretch p-6 bg-white rounded-2xl border border-[#E4E4E7] inline-flex flex-col justify-start items-start gap-6">
           <Text className="self-stretch justify-center text-Color-Solid-Color-Default-default-800 text-xl font-bold font-['Fustat']">
-            Today's Activity
+            Today&apos;s Activity
           </Text>
 
           {isLoading && waterLogs.length === 0 ? (

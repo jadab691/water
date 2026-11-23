@@ -1,24 +1,6 @@
 import { useAuth as useClerkAuth, useUser as useClerkUser } from "@clerk/expo";
 import * as SecureStore from "expo-secure-store";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { apiClient } from "./api";
-
-const REVIEWER_KEY = "is_google_reviewer_mode";
-
-/**
- * Hardcoded credentials dedicated for Google Play Store review.
- * Allows reviewers to enter directly with username/password without OTP or 2FA.
- */
-export const REVIEWER_CREDENTIALS = {
-  username: "reviewer@quadiz.com",
-  alternativeUsername: "reviewer",
-  password: "SmartHydrate2026!",
-  userId: "user_google_reviewer",
-  firstName: "Google",
-  lastName: "Reviewer",
-  fullName: "Google Reviewer",
-  email: "reviewer@quadiz.com",
-} as const;
 
 export type AppUser = {
   id: string;
@@ -35,8 +17,6 @@ type AuthContextType = {
   isSignedIn: boolean;
   isLoaded: boolean;
   user: AppUser | null;
-  isReviewer: boolean;
-  loginAsReviewer: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -44,110 +24,139 @@ const AuthContext = createContext<AuthContextType>({
   isSignedIn: false,
   isLoaded: false,
   user: null,
-  isReviewer: false,
-  loginAsReviewer: async () => {},
   signOut: async () => {},
 });
+
+const OFFLINE_USER_KEY = "smart-hydrate.offline-user";
+const CLERK_LOAD_TIMEOUT_MS = 5000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clerkAuth = useClerkAuth({ treatPendingAsSignedOut: false });
   const clerkUser = useClerkUser();
-  const [isReviewer, setIsReviewer] = useState(false);
-  const [isCheckingReviewer, setIsCheckingReviewer] = useState(true);
+  const [cachedUser, setCachedUser] = useState<AppUser | null>(null);
+  const [offlineUserLoaded, setOfflineUserLoaded] = useState(false);
+  const [clerkLoadTimedOut, setClerkLoadTimedOut] = useState(false);
 
   useEffect(() => {
-    const checkReviewer = async () => {
-      try {
-        const val = await SecureStore.getItemAsync(REVIEWER_KEY);
-        setIsReviewer(val === "true");
-      } catch {
-        setIsReviewer(false);
-      } finally {
-        setIsCheckingReviewer(false);
-      }
-    };
-    checkReviewer();
-  }, []);
+    let active = true;
 
-  const loginAsReviewer = async () => {
-    await SecureStore.setItemAsync(REVIEWER_KEY, "true");
-    setIsReviewer(true);
+    SecureStore.getItemAsync(OFFLINE_USER_KEY)
+      .then((value) => {
+        if (!active || !value) return;
 
-    // Initialize backend profile and default cups in MySQL for the reviewer
-    try {
-      await apiClient.makeRequest("/api/users/initialize-profile", {
-        method: "POST",
-        body: JSON.stringify({
-          clerkUserId: REVIEWER_CREDENTIALS.userId,
-          email: REVIEWER_CREDENTIALS.email,
-          firstName: REVIEWER_CREDENTIALS.firstName,
-          lastName: REVIEWER_CREDENTIALS.lastName,
-        }),
+        try {
+          const parsed = JSON.parse(value) as Partial<AppUser>;
+          if (typeof parsed.id !== "string" || !parsed.id.trim()) {
+            throw new Error("Cached offline user has no valid ID.");
+          }
+
+          setCachedUser({
+            id: parsed.id,
+            firstName:
+              typeof parsed.firstName === "string" ? parsed.firstName : "User",
+            lastName: typeof parsed.lastName === "string" ? parsed.lastName : "",
+            fullName:
+              typeof parsed.fullName === "string" ? parsed.fullName : "User",
+            primaryEmailAddress:
+              parsed.primaryEmailAddress &&
+              typeof parsed.primaryEmailAddress.emailAddress === "string"
+                ? parsed.primaryEmailAddress
+                : undefined,
+          });
+        } catch (error) {
+          console.error("Could not read the saved offline user:", error);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Could not access the saved offline user:", error);
+      })
+      .finally(() => {
+        if (active) setOfflineUserLoaded(true);
       });
 
-      apiClient.setCachedData(
-        `/api/users/cups?clerkUserId=${encodeURIComponent(REVIEWER_CREDENTIALS.userId)}`,
-        {
-          cups: [
-            { id: 1, name: "Glass", volume: 250, unit: "ml" },
-            { id: 2, name: "Bottle", volume: 500, unit: "ml" },
-          ],
-        },
-      );
-    } catch (e) {
-      console.warn("Could not pre-init reviewer profile:", e);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (clerkAuth.isLoaded) {
+      return;
     }
-  };
+
+    const timeout = setTimeout(
+      () => setClerkLoadTimedOut(true),
+      CLERK_LOAD_TIMEOUT_MS,
+    );
+    return () => clearTimeout(timeout);
+  }, [clerkAuth.isLoaded]);
+
+  const clerkUserId = clerkUser.user?.id;
+  const clerkFirstName = clerkUser.user?.firstName || "User";
+  const clerkLastName = clerkUser.user?.lastName || "";
+  const clerkFullName =
+    clerkUser.user?.fullName || clerkUser.user?.firstName || "User";
+  const clerkEmail = clerkUser.user?.primaryEmailAddress?.emailAddress;
+
+  const clerkAppUser: AppUser | null = clerkUser.user
+    ? {
+        id: clerkUser.user.id,
+        firstName: clerkFirstName,
+        lastName: clerkLastName,
+        fullName: clerkFullName,
+        primaryEmailAddress: clerkEmail
+          ? { emailAddress: clerkEmail }
+          : undefined,
+        hasImage: Boolean(clerkUser.user.hasImage),
+        imageUrl: clerkUser.user.imageUrl,
+        update: (data: any) => clerkUser.user!.update(data),
+      }
+    : null;
+
+  useEffect(() => {
+    if (!clerkAuth.isSignedIn || !clerkUserId) return;
+
+    const offlineProfile: AppUser = {
+      id: clerkUserId,
+      firstName: clerkFirstName,
+      lastName: clerkLastName,
+      fullName: clerkFullName,
+      primaryEmailAddress: clerkEmail
+        ? { emailAddress: clerkEmail }
+        : undefined,
+    };
+
+    SecureStore.setItemAsync(OFFLINE_USER_KEY, JSON.stringify(offlineProfile))
+      .then(() => setCachedUser(offlineProfile))
+      .catch((error: unknown) => {
+        console.error("Could not save the offline user:", error);
+      });
+  }, [
+    clerkAuth.isSignedIn,
+    clerkUserId,
+    clerkFirstName,
+    clerkLastName,
+    clerkFullName,
+    clerkEmail,
+  ]);
 
   const signOut = async () => {
-    if (isReviewer) {
-      await SecureStore.deleteItemAsync(REVIEWER_KEY);
-      setIsReviewer(false);
-    }
-    apiClient.clearCache();
     if (clerkAuth.isSignedIn) {
       await clerkAuth.signOut();
     }
+    setCachedUser(null);
+    await SecureStore.deleteItemAsync(OFFLINE_USER_KEY);
   };
 
-  const isLoaded = isReviewer ? true : clerkAuth.isLoaded && !isCheckingReviewer;
-  const isSignedIn = isReviewer || Boolean(clerkAuth.isSignedIn);
-
-  let user: AppUser | null = null;
-  if (isReviewer) {
-    user = {
-      id: REVIEWER_CREDENTIALS.userId,
-      firstName: REVIEWER_CREDENTIALS.firstName,
-      lastName: REVIEWER_CREDENTIALS.lastName,
-      fullName: REVIEWER_CREDENTIALS.fullName,
-      primaryEmailAddress: { emailAddress: REVIEWER_CREDENTIALS.email },
-      hasImage: false,
-      imageUrl: undefined,
-      update: async () => {},
-    };
-  } else if (clerkUser.user) {
-    user = {
-      id: clerkUser.user.id,
-      firstName: clerkUser.user.firstName || "User",
-      lastName: clerkUser.user.lastName || "",
-      fullName: clerkUser.user.fullName || clerkUser.user.firstName || "User",
-      primaryEmailAddress: clerkUser.user.primaryEmailAddress
-        ? { emailAddress: clerkUser.user.primaryEmailAddress.emailAddress }
-        : undefined,
-      hasImage: Boolean(clerkUser.user.hasImage),
-      imageUrl: clerkUser.user.imageUrl,
-      update: (d: any) => clerkUser.user!.update(d),
-    };
-  }
+  const user = clerkAppUser ?? (clerkAuth.isSignedIn ? null : cachedUser);
 
   return (
     <AuthContext.Provider
       value={{
-        isSignedIn,
-        isLoaded,
+        isSignedIn: Boolean(clerkAuth.isSignedIn || cachedUser),
+        isLoaded:
+          offlineUserLoaded && (clerkAuth.isLoaded || clerkLoadTimedOut),
         user,
-        isReviewer,
-        loginAsReviewer,
         signOut,
       }}
     >
