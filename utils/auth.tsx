@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clerkAuth.isLoaded]);
 
   const clerkUserId = clerkUser.user?.id;
+  // const users = usestate[name , setName]
   const clerkFirstName = clerkUser.user?.firstName || "User";
   const clerkLastName = clerkUser.user?.lastName || "";
   const clerkFullName =
