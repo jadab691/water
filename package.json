@@ -12,7 +12,7 @@
     "postinstall": "node ./scripts/patch-metro.js"
   },
   "dependencies": {
-    "@clerk/expo": "^4.17.4",
+    "@clerk/clerk-expo": "^2.20.4",
     "@expo-google-fonts/fredoka-one": "^0.2.3",
     "@expo-google-fonts/fustat": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",

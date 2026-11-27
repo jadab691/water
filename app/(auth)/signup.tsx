@@ -1,7 +1,7 @@
 import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
 import Text from "@/components/Text";
-import { useSignUp } from "@clerk/expo";
+import { useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
