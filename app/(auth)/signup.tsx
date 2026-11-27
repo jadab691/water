@@ -1,7 +1,7 @@
 import Btn from "@/components/Btn";
 import FormInput from "@/components/FormInput";
 import Text from "@/components/Text";
-import { useSignUp } from "@clerk/expo";
+import { useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -17,7 +17,7 @@ type FormState = {
 
 const Signup = () => {
   const router = useRouter();
-  const { signUp } = useSignUp();
+  const { isLoaded, signUp, setActive } = useSignUp();
 
   const [generalError, setGeneralError] = useState<string>("");
   const [infoMessage, setInfoMessage] = useState<string>("");
@@ -32,6 +32,8 @@ const Signup = () => {
   });
 
   const handleSignup = async () => {
+    if (!isLoaded || !signUp) return;
+
     setGeneralError("");
     setInfoMessage("");
     setIsLoading(true);
@@ -72,27 +74,16 @@ const Signup = () => {
       const firstName = nameParts[0];
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
 
-      const passwordResult = await signUp.password({
+      const signupResult = await signUp.create({
         emailAddress: formState.email.trim(),
         password: formState.password,
         firstName,
         ...(lastName ? { lastName } : {}),
       });
 
-      if (passwordResult.error) {
-        setGeneralError(passwordResult.error.message || "Signup failed.");
-        setIsLoading(false);
-        return;
-      }
-
-      const sendCodeResult = await signUp.verifications.sendEmailCode();
-      if (sendCodeResult.error) {
-        setGeneralError(
-          sendCodeResult.error.message || "Failed to send verification code.",
-        );
-        setIsLoading(false);
-        return;
-      }
+      await signupResult.prepareEmailAddressVerification({
+        strategy: "email_code",
+      });
 
       setIsVerifyingEmail(true);
       setInfoMessage("Verification code sent to your email.");
@@ -106,6 +97,8 @@ const Signup = () => {
   };
 
   const handleVerifyEmail = async () => {
+    if (!isLoaded || !signUp || !setActive) return;
+
     setGeneralError("");
     setInfoMessage("");
     setIsLoading(true);
@@ -117,32 +110,17 @@ const Signup = () => {
     }
 
     try {
-      const verifyResult = await signUp.verifications.verifyEmailCode({
+      const verifyResult = await signUp.attemptEmailAddressVerification({
         code: formState.code.trim(),
       });
-      if (verifyResult.error) {
-        setGeneralError(
-          verifyResult.error.message || "Invalid verification code.",
-        );
-        setIsLoading(false);
-        return;
-      }
 
-      if (!signUp.createdUserId) {
+      if (verifyResult.status !== "complete" || !verifyResult.createdSessionId) {
         setGeneralError("Verification incomplete. Please check your code.");
         setIsLoading(false);
         return;
       }
 
-      const finalizeResult = await signUp.finalize();
-      if (finalizeResult.error) {
-        setGeneralError(
-          finalizeResult.error.message || "Failed to finalize signup.",
-        );
-        setIsLoading(false);
-        return;
-      }
-
+      await setActive({ session: verifyResult.createdSessionId });
       router.replace("/home");
     } catch (error) {
       const errorMessage =

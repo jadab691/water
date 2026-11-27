@@ -1,5 +1,5 @@
-import { ClerkProvider } from "@clerk/expo";
-import { tokenCache } from "@clerk/expo/token-cache";
+import { ClerkProvider } from "@clerk/clerk-expo";
+import { tokenCache } from "@clerk/clerk-expo/token-cache";
 
 import { FredokaOne_400Regular } from "@expo-google-fonts/fredoka-one";
 import {

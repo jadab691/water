@@ -1,4 +1,4 @@
-import { useAuth as useClerkAuth, useUser as useClerkUser } from "@clerk/expo";
+import { useAuth as useClerkAuth, useUser as useClerkUser } from "@clerk/clerk-expo";
 import * as SecureStore from "expo-secure-store";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clerkAuth.isLoaded]);
 
   const clerkUserId = clerkUser.user?.id;
+  // const users = usestate[name , setName]
   const clerkFirstName = clerkUser.user?.firstName || "User";
   const clerkLastName = clerkUser.user?.lastName || "";
   const clerkFullName =
